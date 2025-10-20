@@ -16,10 +16,10 @@ set(SOURCES
   )
 
 set(DEPENDS_ON
-  Cabana::cabanacore
-  Cabana::Cajita
-  Silo::silo 
-  mpi
+  Cabana::Core
+  Cabana::Grid
+  SILO::silo 
+  MPI::MPI_CXX
   )
  
 set(INCLUDES
@@ -27,7 +27,7 @@ set(INCLUDES
     ${CMAKE_CURRENT_BINARY_DIR}
   )
        
-blt_add_library( NAME cajitafluids
+blt_add_library( NAME cabanafluids
                  HEADERS ${HEADERS}
                  SOURCES ${SOURCES}
                  INCLUDES ${INCLUDES}
