@@ -33,8 +33,8 @@ template <>
 struct InflowSource<2>
 {
     template <class ArrayType>
-    KOKKOS_INLINE_FUNCTION void operator()( Cabana::Grid::Cell, ArrayType& q, int i,
-                                            int j, double x, double y,
+    KOKKOS_INLINE_FUNCTION void operator()( Cabana::Grid::Cell, ArrayType& q,
+                                            int i, int j, double x, double y,
                                             [[maybe_unused]] double delta_t,
                                             [[maybe_unused]] double v ) const
     {
@@ -53,8 +53,8 @@ struct InflowSource<2>
 
     template <class ArrayType>
     KOKKOS_INLINE_FUNCTION void
-    operator()( Cabana::Grid::Face<Cabana::Grid::Dim::I>, ArrayType& ux, int i, int j,
-                double x, double y, [[maybe_unused]] double delta_t,
+    operator()( Cabana::Grid::Face<Cabana::Grid::Dim::I>, ArrayType& ux, int i,
+                int j, double x, double y, [[maybe_unused]] double delta_t,
                 [[maybe_unused]] double v ) const
     {
         if ( x >= _bounding_box[0] && x < _bounding_box[2] &&
@@ -67,8 +67,8 @@ struct InflowSource<2>
 
     template <class ArrayType>
     KOKKOS_INLINE_FUNCTION void
-    operator()( Cabana::Grid::Face<Cabana::Grid::Dim::J>, ArrayType& uy, int i, int j,
-                double x, double y, [[maybe_unused]] double delta_t,
+    operator()( Cabana::Grid::Face<Cabana::Grid::Dim::J>, ArrayType& uy, int i,
+                int j, double x, double y, [[maybe_unused]] double delta_t,
                 [[maybe_unused]] double v ) const
     {
         if ( x >= _bounding_box[0] && x < _bounding_box[2] &&

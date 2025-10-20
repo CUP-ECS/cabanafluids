@@ -58,10 +58,11 @@ class VelocityCorrector<2, ExecutionSpace, MemorySpace, SparseSolver>
     using pm_type = ProblemManager<2, ExecutionSpace, MemorySpace>;
     using bc_type = BoundaryCondition<2>;
     using hypre_solver_type =
-        Cabana::Grid::HypreStructuredSolver<double, Cabana::Grid::Cell, MemorySpace>;
+        Cabana::Grid::HypreStructuredSolver<double, Cabana::Grid::Cell,
+                                            MemorySpace>;
     using reference_solver_type =
-        Cabana::Grid::ReferenceStructuredSolver<double, Cabana::Grid::Cell, mesh_type,
-                                          MemorySpace>;
+        Cabana::Grid::ReferenceStructuredSolver<double, Cabana::Grid::Cell,
+                                                mesh_type, MemorySpace>;
     using Cell = Cabana::Grid::Cell;
     using FaceI = Cabana::Grid::Face<Cabana::Grid::Dim::I>;
     using FaceJ = Cabana::Grid::Face<Cabana::Grid::Dim::J>;
@@ -82,9 +83,9 @@ class VelocityCorrector<2, ExecutionSpace, MemorySpace, SparseSolver>
         auto vector_layout =
             Cabana::Grid::createArrayLayout( _mesh->localGrid(), 1, Cell() );
         _lhs = Cabana::Grid::createArray<double, MemorySpace>( "pressure LHS",
-                                                         vector_layout );
+                                                               vector_layout );
         _rhs = Cabana::Grid::createArray<double, MemorySpace>( "pressure RHS",
-                                                         vector_layout );
+                                                               vector_layout );
         Cabana::Grid::ArrayOp::assign( *_lhs, 0.0, Cabana::Grid::Ghost() );
         Cabana::Grid::ArrayOp::assign( *_rhs, 0.0, Cabana::Grid::Ghost() );
 
@@ -120,10 +121,10 @@ class VelocityCorrector<2, ExecutionSpace, MemorySpace, SparseSolver>
 
         // Build the solver matrix - set the default entry for each cell
         // then apply the boundary conditions to it
-        auto owned_space =
-            local_grid->indexSpace( Cabana::Grid::Own(), Cell(), Cabana::Grid::Local() );
-        auto l2g = Cabana::Grid::IndexConversion::createL2G( *( _mesh->localGrid() ),
-                                                       Cell() );
+        auto owned_space = local_grid->indexSpace( Cabana::Grid::Own(), Cell(),
+                                                   Cabana::Grid::Local() );
+        auto l2g = Cabana::Grid::IndexConversion::createL2G(
+            *( _mesh->localGrid() ), Cell() );
         auto scale = _dt / ( _density * _mesh->cellSize() * _mesh->cellSize() );
         const bc_type& bc = _bc;
 
@@ -166,8 +167,8 @@ class VelocityCorrector<2, ExecutionSpace, MemorySpace, SparseSolver>
         solver->setPreconditionerStencil( diag_stencil, false );
         const auto& preconditioner_entries = solver->getPreconditionerValues();
         auto local_grid = _mesh->localGrid();
-        auto owned_space =
-            local_grid->indexSpace( Cabana::Grid::Own(), Cell(), Cabana::Grid::Local() );
+        auto owned_space = local_grid->indexSpace( Cabana::Grid::Own(), Cell(),
+                                                   Cabana::Grid::Local() );
         auto preconditioner_view = preconditioner_entries.view();
 
         Kokkos::parallel_for(
@@ -196,8 +197,8 @@ class VelocityCorrector<2, ExecutionSpace, MemorySpace, SparseSolver>
         auto v = _pm->get( FaceJ(), Field::Velocity(), Version::Current() );
 
         auto local_grid = _mesh->localGrid();
-        auto cell_space = local_grid->indexSpace( Cabana::Grid::Own(), Cabana::Grid::Cell(),
-                                                  Cabana::Grid::Local() );
+        auto cell_space = local_grid->indexSpace(
+            Cabana::Grid::Own(), Cabana::Grid::Cell(), Cabana::Grid::Local() );
         auto rhs = _rhs->view();
 
         Kokkos::parallel_for(
@@ -220,13 +221,13 @@ class VelocityCorrector<2, ExecutionSpace, MemorySpace, SparseSolver>
         auto v = _pm->get( FaceJ(), Field::Velocity(), Version::Current() );
         auto p = _lhs->view();
 
-        auto l2g = Cabana::Grid::IndexConversion::createL2G( *( _mesh->localGrid() ),
-                                                       Cell() );
+        auto l2g = Cabana::Grid::IndexConversion::createL2G(
+            *( _mesh->localGrid() ), Cell() );
         auto local_grid = _mesh->localGrid();
-        auto iface_space =
-            local_grid->indexSpace( Cabana::Grid::Own(), FaceI(), Cabana::Grid::Local() );
-        auto jface_space =
-            local_grid->indexSpace( Cabana::Grid::Own(), FaceJ(), Cabana::Grid::Local() );
+        auto iface_space = local_grid->indexSpace( Cabana::Grid::Own(), FaceI(),
+                                                   Cabana::Grid::Local() );
+        auto jface_space = local_grid->indexSpace( Cabana::Grid::Own(), FaceJ(),
+                                                   Cabana::Grid::Local() );
 
         /* Now apply the LHS to adjust the velocity field. We need to
          * halo the lhs (the computed pressure) to adjust edge velocities. */
@@ -303,25 +304,28 @@ createVelocityCorrector( const std::shared_ptr<ProblemManagerType>& pm,
 {
     using mesh_type = Cabana::Grid::UniformMesh<double, 2>;
     using hypre_solver_type =
-        Cabana::Grid::HypreStructuredSolver<double, Cabana::Grid::Cell, MemorySpace>;
+        Cabana::Grid::HypreStructuredSolver<double, Cabana::Grid::Cell,
+                                            MemorySpace>;
     using reference_solver_type =
-        Cabana::Grid::ReferenceStructuredSolver<double, Cabana::Grid::Cell, mesh_type,
-                                          MemorySpace>;
+        Cabana::Grid::ReferenceStructuredSolver<double, Cabana::Grid::Cell,
+                                                mesh_type, MemorySpace>;
 
-    auto vector_layout =
-        Cabana::Grid::createArrayLayout( pm->mesh()->localGrid(), 1, Cabana::Grid::Cell() );
+    auto vector_layout = Cabana::Grid::createArrayLayout(
+        pm->mesh()->localGrid(), 1, Cabana::Grid::Cell() );
     if ( solver.compare( "Reference" ) == 0 )
     {
-        auto ps = Cabana::Grid::createReferenceConjugateGradient<double, MemorySpace>(
-            *vector_layout );
+        auto ps =
+            Cabana::Grid::createReferenceConjugateGradient<double, MemorySpace>(
+                *vector_layout );
         return std::make_shared<CabanaFluids::VelocityCorrector<
             NumSpaceDims, ExecutionSpace, MemorySpace, reference_solver_type>>(
             pm, bc, ps, density, delta_t );
     }
     else
     {
-        auto ps = Cabana::Grid::createHypreStructuredSolver<double, MemorySpace>(
-            solver, *vector_layout );
+        auto ps =
+            Cabana::Grid::createHypreStructuredSolver<double, MemorySpace>(
+                solver, *vector_layout );
         if ( precon.compare( "None" ) != 0 && precon.compare( "none" ) != 0 )
         {
             auto preconditioner =

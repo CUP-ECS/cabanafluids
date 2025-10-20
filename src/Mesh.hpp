@@ -36,7 +36,7 @@ class Mesh
 {
   public:
     using memory_space = MemorySpace;
-    //using device_type = Kokkos::Device<ExecutionSpace, MemorySpace>;
+    // using device_type = Kokkos::Device<ExecutionSpace, MemorySpace>;
     using mesh_type = Cabana::Grid::UniformMesh<double, Dim>;
 
     // Construct a mesh.
@@ -88,15 +88,16 @@ class Mesh
         for ( int i = 0; i < Dim; i++ )
             periodic[i] = false;
 
-        auto global_grid = Cabana::Grid::createGlobalGrid( comm, global_mesh,
-                                                     periodic, partitioner );
+        auto global_grid = Cabana::Grid::createGlobalGrid(
+            comm, global_mesh, periodic, partitioner );
 
         // Build the local grid.
         int halo_width = halo_cell_width;
         _local_grid = Cabana::Grid::createLocalGrid( global_grid, halo_width );
 
         // Build the local mesh. XXX Why is this hard to share? Is it expensive?
-        auto local_mesh = Cabana::Grid::createLocalMesh<memory_space>( *_local_grid );
+        auto local_mesh =
+            Cabana::Grid::createLocalMesh<memory_space>( *_local_grid );
         _local_mesh =
             std::make_shared<Cabana::Grid::LocalMesh<memory_space, mesh_type>>(
                 local_mesh );
@@ -139,7 +140,8 @@ class Mesh
 
   public:
     std::shared_ptr<Cabana::Grid::LocalGrid<mesh_type>> _local_grid;
-    std::shared_ptr<Cabana::Grid::LocalMesh<memory_space, mesh_type>> _local_mesh;
+    std::shared_ptr<Cabana::Grid::LocalMesh<memory_space, mesh_type>>
+        _local_mesh;
 
     Kokkos::Array<int, Dim> _min_domain_global_cell_index;
     Kokkos::Array<int, Dim> _max_domain_global_cell_index;

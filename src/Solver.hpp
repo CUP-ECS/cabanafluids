@@ -17,9 +17,9 @@
 #include <Kokkos_Core.hpp>
 
 #include <Cabana_Grid_HypreStructuredSolver.hpp>
-//#include <Cabana_Partitioner.hpp>
-//#include <Cabana_ReferenceStructuredSolver.hpp>
-//#include <Cabana_Types.hpp>
+// #include <Cabana_Partitioner.hpp>
+// #include <Cabana_ReferenceStructuredSolver.hpp>
+// #include <Cabana_Types.hpp>
 
 #include <BodyForce.hpp>
 #include <BoundaryConditions.hpp>
@@ -190,8 +190,8 @@ class Solver<2, ExecutionSpace, MemorySpace> : public SolverBase
         double cell_size = _mesh->cellSize();
         double cell_area = cell_size * cell_size;
 
-        auto owned_cells = local_grid.indexSpace( Cabana::Grid::Own(), Cabana::Grid::Cell(),
-                                                  Cabana::Grid::Local() );
+        auto owned_cells = local_grid.indexSpace(
+            Cabana::Grid::Own(), Cabana::Grid::Cell(), Cabana::Grid::Local() );
 
         // Create local variable versions of the class members to avoid needing
         // to use a (potentially expensive) class lambda
@@ -220,8 +220,8 @@ class Solver<2, ExecutionSpace, MemorySpace> : public SolverBase
         Kokkos::Profiling::popRegion();
 
         Kokkos::Profiling::pushRegion( "Solve::AddInputs::FaceI" );
-        auto owned_ifaces =
-            local_grid.indexSpace( Cabana::Grid::Own(), FaceI(), Cabana::Grid::Local() );
+        auto owned_ifaces = local_grid.indexSpace( Cabana::Grid::Own(), FaceI(),
+                                                   Cabana::Grid::Local() );
         auto ui = _pm->get( FaceI(), Field::Velocity(), Version::Current() );
         auto l2g_facei =
             Cabana::Grid::IndexConversion::createL2G( local_grid, FaceI() );
@@ -244,8 +244,8 @@ class Solver<2, ExecutionSpace, MemorySpace> : public SolverBase
         Kokkos::Profiling::popRegion();
 
         Kokkos::Profiling::pushRegion( "Solve::AddInputs::FaceJ" );
-        auto owned_jfaces =
-            local_grid.indexSpace( Cabana::Grid::Own(), FaceJ(), Cabana::Grid::Local() );
+        auto owned_jfaces = local_grid.indexSpace( Cabana::Grid::Own(), FaceJ(),
+                                                   Cabana::Grid::Local() );
         auto uj = _pm->get( FaceJ(), Field::Velocity(), Version::Current() );
         auto l2g_facej =
             Cabana::Grid::IndexConversion::createL2G( local_grid, FaceJ() );

@@ -17,8 +17,8 @@
 // Include Statements
 #include <Cabana_Core.hpp>
 #include <Cabana_Grid.hpp>
-#include <Kokkos_Core.hpp>
 #include <Interpolation.hpp>
+#include <Kokkos_Core.hpp>
 
 #include <pmpio.h>
 #include <silo.h>
@@ -134,8 +134,8 @@ class SiloWriter
         // Advected quantity first - copy owned portion from the primary
         // execution space to the host execution space
         Kokkos::Profiling::pushRegion( "SiloWriter::WriteFile::WriteQuantity" );
-        auto q =
-            _pm->get( Cabana::Grid::Cell(), Field::Quantity(), Version::Current() );
+        auto q = _pm->get( Cabana::Grid::Cell(), Field::Quantity(),
+                           Version::Current() );
         auto xmin = cell_domain.min( 0 );
         auto ymin = cell_domain.min( 1 );
 
@@ -161,10 +161,10 @@ class SiloWriter
         Kokkos::Profiling::popRegion();
 
         Kokkos::Profiling::pushRegion( "SiloWriter::WriteFile::WriteVelocity" );
-        auto u = _pm->get( Cabana::Grid::Face<Cabana::Grid::Dim::I>(), Field::Velocity(),
-                           Version::Current() );
-        auto v = _pm->get( Cabana::Grid::Face<Cabana::Grid::Dim::J>(), Field::Velocity(),
-                           Version::Current() );
+        auto u = _pm->get( Cabana::Grid::Face<Cabana::Grid::Dim::I>(),
+                           Field::Velocity(), Version::Current() );
+        auto v = _pm->get( Cabana::Grid::Face<Cabana::Grid::Dim::J>(),
+                           Field::Velocity(), Version::Current() );
 
         /* Because VisIt and all the other things that read Silo files
          * can't currently show edge velocity magnitudes, we

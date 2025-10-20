@@ -45,8 +45,8 @@ struct BodyForce<2>
     /* Simple forward Euler for body forces */
     template <class ArrayType>
     KOKKOS_INLINE_FUNCTION void
-    operator()( Cabana::Grid::Face<Cabana::Grid::Dim::I>, ArrayType& ux, int i, int j,
-                [[maybe_unused]] double x, [[maybe_unused]] double y,
+    operator()( Cabana::Grid::Face<Cabana::Grid::Dim::I>, ArrayType& ux, int i,
+                int j, [[maybe_unused]] double x, [[maybe_unused]] double y,
                 double delta_t, [[maybe_unused]] double v ) const
     {
         ux( i, j, 0 ) += _force[0] * delta_t;
@@ -54,8 +54,8 @@ struct BodyForce<2>
 
     template <class ArrayType>
     KOKKOS_INLINE_FUNCTION void
-    operator()( Cabana::Grid::Face<Cabana::Grid::Dim::J>, ArrayType& uy, int i, int j,
-                [[maybe_unused]] double x, [[maybe_unused]] double y,
+    operator()( Cabana::Grid::Face<Cabana::Grid::Dim::J>, ArrayType& uy, int i,
+                int j, [[maybe_unused]] double x, [[maybe_unused]] double y,
                 double delta_t, [[maybe_unused]] double v ) const
     {
         uy( i, j, 0 ) += _force[1] * delta_t;

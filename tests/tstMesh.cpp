@@ -59,7 +59,8 @@ TYPED_TEST( MeshTest, LocalGridSetup )
      * spatial dimension.
      */
     auto ghost_local_face_space = local_grid->indexSpace(
-        Cabana::Grid::Ghost(), Cabana::Grid::Face<Cabana::Grid::Dim::I>(), Cabana::Grid::Local() );
+        Cabana::Grid::Ghost(), Cabana::Grid::Face<Cabana::Grid::Dim::I>(),
+        Cabana::Grid::Local() );
     EXPECT_EQ( ghost_local_face_space.extent( 0 ),
                this->boxCells_ / global_grid.dimNumBlock( 1 ) +
                    2 * this->haloWidth_ + 1 );

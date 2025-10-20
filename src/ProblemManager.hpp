@@ -107,19 +107,19 @@ class ProblemManager<2, ExecutionSpace, MemorySpace>
     using FaceK = Cabana::Grid::Face<Cabana::Grid::Dim::K>;
 
     using cell_array =
-        Cabana::Grid::Array<double, Cabana::Grid::Cell, Cabana::Grid::UniformMesh<double, 2>,
-                      MemorySpace>;
+        Cabana::Grid::Array<double, Cabana::Grid::Cell,
+                            Cabana::Grid::UniformMesh<double, 2>, MemorySpace>;
     using iface_array =
         Cabana::Grid::Array<double, Cabana::Grid::Face<Cabana::Grid::Dim::I>,
-                      Cabana::Grid::UniformMesh<double, 2>, MemorySpace>;
+                            Cabana::Grid::UniformMesh<double, 2>, MemorySpace>;
     using jface_array =
         Cabana::Grid::Array<double, Cabana::Grid::Face<Cabana::Grid::Dim::J>,
-                      Cabana::Grid::UniformMesh<double, 2>, MemorySpace>;
+                            Cabana::Grid::UniformMesh<double, 2>, MemorySpace>;
 
     // Meaningless type for now until we have 3D support in.
     using kface_array =
         Cabana::Grid::Array<double, Cabana::Grid::Face<Cabana::Grid::Dim::K>,
-                      Cabana::Grid::UniformMesh<double, 2>, MemorySpace>;
+                            Cabana::Grid::UniformMesh<double, 2>, MemorySpace>;
     using halo_type = Cabana::Grid::Halo<MemorySpace>;
     using mesh_type = Mesh<2, ExecutionSpace, MemorySpace>;
 
@@ -136,8 +136,8 @@ class ProblemManager<2, ExecutionSpace, MemorySpace>
             _mesh->localGrid(), 1, Cabana::Grid::Face<Cabana::Grid::Dim::I>() );
         auto jface_scalar_layout = Cabana::Grid::createArrayLayout(
             _mesh->localGrid(), 1, Cabana::Grid::Face<Cabana::Grid::Dim::J>() );
-        auto cell_scalar_layout =
-            Cabana::Grid::createArrayLayout( _mesh->localGrid(), 1, Cabana::Grid::Cell() );
+        auto cell_scalar_layout = Cabana::Grid::createArrayLayout(
+            _mesh->localGrid(), 1, Cabana::Grid::Cell() );
 
         // The actual arrays storing mesh quantities
         // 1. The quantity of the scalar quantity being advected
@@ -145,8 +145,10 @@ class ProblemManager<2, ExecutionSpace, MemorySpace>
             "quantity", cell_scalar_layout );
         _quantity_next = Cabana::Grid::createArray<double, MemorySpace>(
             "quantity", cell_scalar_layout );
-        Cabana::Grid::ArrayOp::assign( *_quantity_curr, 0.0, Cabana::Grid::Ghost() );
-        Cabana::Grid::ArrayOp::assign( *_quantity_next, 0.0, Cabana::Grid::Ghost() );
+        Cabana::Grid::ArrayOp::assign( *_quantity_curr, 0.0,
+                                       Cabana::Grid::Ghost() );
+        Cabana::Grid::ArrayOp::assign( *_quantity_next, 0.0,
+                                       Cabana::Grid::Ghost() );
 
         // 2. The magnitudes of the velocities normal to the cell faces
         _u_curr = Cabana::Grid::createArray<double, MemorySpace>(
@@ -170,9 +172,9 @@ class ProblemManager<2, ExecutionSpace, MemorySpace>
         // with a 3rd-order polynomial which could reach two additional cells
         // outside our boundary.
         int halo_depth = _mesh->localGrid()->haloCellWidth();
-        _advection_halo =
-            Cabana::Grid::createHalo( Cabana::Grid::NodeHaloPattern<2>(), halo_depth,
-                                *_quantity_curr, *_u_curr, *_v_curr );
+        _advection_halo = Cabana::Grid::createHalo(
+            Cabana::Grid::NodeHaloPattern<2>(), halo_depth, *_quantity_curr,
+            *_u_curr, *_v_curr );
 
         // Initialize State Values ( quantity and velocity )
         initialize( create_functor );
@@ -195,11 +197,12 @@ class ProblemManager<2, ExecutionSpace, MemorySpace>
         double cell_size = _mesh->cellSize();
 
         // Get State Arrays
-        auto q = get( Cabana::Grid::Cell(), Field::Quantity(), Version::Current() );
+        auto q =
+            get( Cabana::Grid::Cell(), Field::Quantity(), Version::Current() );
 
         // Loop Over All Owned Cells ( i, j )
-        auto own_cells = local_grid.indexSpace( Cabana::Grid::Own(), Cabana::Grid::Cell(),
-                                                Cabana::Grid::Local() );
+        auto own_cells = local_grid.indexSpace(
+            Cabana::Grid::Own(), Cabana::Grid::Cell(), Cabana::Grid::Local() );
         int index[2] = { 0, 0 };
         double loc[2]; // x/y loocation of the cell at 0, 0
         local_mesh.coordinates( Cabana::Grid::Cell(), index, loc );
@@ -213,16 +216,18 @@ class ProblemManager<2, ExecutionSpace, MemorySpace>
                 x[0] = loc[0] + cell_size * i;
                 x[1] = loc[1] + cell_size * j;
                 // Initialization Function
-                create_functor( Cabana::Grid::Cell(), Field::Quantity(), coords, x,
-                                q( i, j, 0 ) );
+                create_functor( Cabana::Grid::Cell(), Field::Quantity(), coords,
+                                x, q( i, j, 0 ) );
             } );
 
         // Loop Over All Owned I-Faces ( i, j )
         auto own_faces = local_grid.indexSpace(
-            Cabana::Grid::Own(), Cabana::Grid::Face<Cabana::Grid::Dim::I>(), Cabana::Grid::Local() );
-        auto u = get( Cabana::Grid::Face<Cabana::Grid::Dim::I>(), Field::Velocity(),
-                      Version::Current() );
-        local_mesh.coordinates( Cabana::Grid::Face<Cabana::Grid::Dim::I>(), index, loc );
+            Cabana::Grid::Own(), Cabana::Grid::Face<Cabana::Grid::Dim::I>(),
+            Cabana::Grid::Local() );
+        auto u = get( Cabana::Grid::Face<Cabana::Grid::Dim::I>(),
+                      Field::Velocity(), Version::Current() );
+        local_mesh.coordinates( Cabana::Grid::Face<Cabana::Grid::Dim::I>(),
+                                index, loc );
         Kokkos::parallel_for(
             "Initialize I-Faces",
             Cabana::Grid::createExecutionPolicy( own_faces, ExecutionSpace() ),
@@ -240,10 +245,12 @@ class ProblemManager<2, ExecutionSpace, MemorySpace>
 
         // Loop Over All Owned J-Faces ( i, j )
         own_faces = local_grid.indexSpace(
-            Cabana::Grid::Own(), Cabana::Grid::Face<Cabana::Grid::Dim::J>(), Cabana::Grid::Local() );
-        auto v = get( Cabana::Grid::Face<Cabana::Grid::Dim::J>(), Field::Velocity(),
-                      Version::Current() );
-        local_mesh.coordinates( Cabana::Grid::Face<Cabana::Grid::Dim::J>(), index, loc );
+            Cabana::Grid::Own(), Cabana::Grid::Face<Cabana::Grid::Dim::J>(),
+            Cabana::Grid::Local() );
+        auto v = get( Cabana::Grid::Face<Cabana::Grid::Dim::J>(),
+                      Field::Velocity(), Version::Current() );
+        local_mesh.coordinates( Cabana::Grid::Face<Cabana::Grid::Dim::J>(),
+                                index, loc );
         Kokkos::parallel_for(
             "Initialize J-Faces",
             Cabana::Grid::createExecutionPolicy( own_faces, ExecutionSpace() ),
@@ -304,7 +311,8 @@ class ProblemManager<2, ExecutionSpace, MemorySpace>
      * @return Returns view of current norm velocity magnitude on i faces
      **/
     typename cell_array::view_type
-    get( Cabana::Grid::Face<Cabana::Grid::Dim::I>, Field::Velocity, Version::Current ) const
+    get( Cabana::Grid::Face<Cabana::Grid::Dim::I>, Field::Velocity,
+         Version::Current ) const
     {
         return _u_curr->view();
     };
@@ -316,8 +324,9 @@ class ProblemManager<2, ExecutionSpace, MemorySpace>
      * @param Version::Next
      * @return Returns view of next norm velocity magnitude on i faces
      **/
-    typename cell_array::view_type get( Cabana::Grid::Face<Cabana::Grid::Dim::I>,
-                                        Field::Velocity, Version::Next ) const
+    typename cell_array::view_type
+    get( Cabana::Grid::Face<Cabana::Grid::Dim::I>, Field::Velocity,
+         Version::Next ) const
     {
         return _u_next->view();
     };
@@ -330,7 +339,8 @@ class ProblemManager<2, ExecutionSpace, MemorySpace>
      * @return Returns view of current norm velocity magnitude on j faces
      **/
     typename cell_array::view_type
-    get( Cabana::Grid::Face<Cabana::Grid::Dim::J>, Field::Velocity, Version::Current ) const
+    get( Cabana::Grid::Face<Cabana::Grid::Dim::J>, Field::Velocity,
+         Version::Current ) const
     {
         return _v_curr->view();
     };
@@ -342,8 +352,9 @@ class ProblemManager<2, ExecutionSpace, MemorySpace>
      * @param Version::Next
      * @return Returns view of next norm velocity magnitude on j faces
      **/
-    typename cell_array::view_type get( Cabana::Grid::Face<Cabana::Grid::Dim::J>,
-                                        Field::Velocity, Version::Next ) const
+    typename cell_array::view_type
+    get( Cabana::Grid::Face<Cabana::Grid::Dim::J>, Field::Velocity,
+         Version::Next ) const
     {
         return _v_next->view();
     };

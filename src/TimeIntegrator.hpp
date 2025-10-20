@@ -16,9 +16,9 @@
 #include <Cabana_Grid.hpp>
 #include <Kokkos_Core.hpp>
 
-#include <Mesh.hpp>
 #include <BoundaryConditions.hpp>
 #include <Interpolation.hpp>
+#include <Mesh.hpp>
 #include <ProblemManager.hpp>
 
 namespace CabanaFluids
@@ -95,8 +95,8 @@ void advect( ExecutionSpace& exec_space, ProblemManagerType& pm, double delta_t,
     auto local_grid = pm.mesh()->localGrid();
     auto local_mesh = *( pm.mesh()->localMesh() );
 
-    auto owned_items =
-        local_grid->indexSpace( Cabana::Grid::Own(), entity, Cabana::Grid::Local() );
+    auto owned_items = local_grid->indexSpace( Cabana::Grid::Own(), entity,
+                                               Cabana::Grid::Local() );
     parallel_for(
         "advection loop", createExecutionPolicy( owned_items, exec_space ),
         KOKKOS_LAMBDA( int i, int j ) {

@@ -29,15 +29,17 @@ class MeshTest : public ::testing::Test
     // Convenience type declarations
     using Cell = Cabana::Grid::Cell;
 
-    using cell_array =
-        Cabana::Grid::Array<double, Cabana::Grid::Cell, Cabana::Grid::UniformMesh<double, 2>,
-                      typename T::MemorySpace>;
+    using cell_array = Cabana::Grid::Array<double, Cabana::Grid::Cell,
+                                           Cabana::Grid::UniformMesh<double, 2>,
+                                           typename T::MemorySpace>;
     using iface_array =
         Cabana::Grid::Array<double, Cabana::Grid::Face<Cabana::Grid::Dim::I>,
-                      Cabana::Grid::UniformMesh<double, 2>, typename T::MemorySpace>;
+                            Cabana::Grid::UniformMesh<double, 2>,
+                            typename T::MemorySpace>;
     using jface_array =
         Cabana::Grid::Array<double, Cabana::Grid::Face<Cabana::Grid::Dim::J>,
-                      Cabana::Grid::UniformMesh<double, 2>, typename T::MemorySpace>;
+                            Cabana::Grid::UniformMesh<double, 2>,
+                            typename T::MemorySpace>;
     using mesh_type = CabanaFluids::Mesh<2, typename T::ExecutionSpace,
                                          typename T::MemorySpace>;
 
