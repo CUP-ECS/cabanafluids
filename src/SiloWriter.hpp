@@ -36,7 +36,6 @@ class SiloWriter
 {
   public:
     using pm_type = ProblemManager<Dims, ExecutionSpace, MemorySpace>;
-    using device_type = Kokkos::Device<ExecutionSpace, MemorySpace>;
     /**
      * Constructor
      * Create new SiloWriter
@@ -145,7 +144,7 @@ class SiloWriter
         // XXX WHY DOES THIS ONLY WORK LAYOUTLEFT?
         Kokkos::View<typename pm_type::cell_array::value_type***,
                      Kokkos::LayoutLeft,
-                     typename pm_type::cell_array::device_type>
+                     typename pm_type::cell_array::memory_space>
             qOwned( "qowned", cell_domain.extent( 0 ), cell_domain.extent( 1 ),
                     1 );
         Kokkos::parallel_for(
@@ -173,12 +172,12 @@ class SiloWriter
         // XXX Why does this only work LayoutLeft???
         Kokkos::View<typename pm_type::cell_array::value_type***,
                      Kokkos::LayoutLeft,
-                     typename pm_type::cell_array::device_type>
+                     typename pm_type::cell_array::memory_space>
             uOwned( "uOwned", cell_domain.extent( 0 ), cell_domain.extent( 1 ),
                     1 );
         Kokkos::View<typename pm_type::cell_array::value_type***,
                      Kokkos::LayoutLeft,
-                     typename pm_type::cell_array::device_type>
+                     typename pm_type::cell_array::memory_space>
             vOwned( "vOwned", cell_domain.extent( 0 ), cell_domain.extent( 1 ),
                     1 );
         Kokkos::parallel_for(

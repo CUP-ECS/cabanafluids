@@ -101,15 +101,15 @@ class VelocityCorrector<2, ExecutionSpace, MemorySpace, SparseSolver>
 
         _pressure_solver->setTolerance( 1.0e-6 );
         _pressure_solver->setMaxIter( 2000 );
-        _pressure_solver->setPrintLevel( 1 );
+        _pressure_solver->setPrintLevel( 0 );
         _pressure_solver->setup();
 
         // Finally, we need to halo pressure values with neighbors with whom
         // we share a face so that we can correct velocities on those faces.
         // Note that this is a much simpler and shallower halo poattern than the
         // ones used for advection.
-        _pressure_halo = Cabana::Grid::createHalo<double, MemorySpace>(
-            *vector_layout, Cabana::Grid::FaceHaloPattern<2>(), 1 );
+        _pressure_halo = Cabana::Grid::createHalo(
+            Cabana::Grid::FaceHaloPattern<2>(), 1, *_lhs );
     }
 
     template <class View_t>
@@ -314,8 +314,6 @@ createVelocityCorrector( const std::shared_ptr<ProblemManagerType>& pm,
     {
         auto ps = Cabana::Grid::createReferenceConjugateGradient<double, MemorySpace>(
             *vector_layout );
-        // The velocity corrector will create the relevant preconditioner here
-        // since it depends on the matrix values
         return std::make_shared<CabanaFluids::VelocityCorrector<
             NumSpaceDims, ExecutionSpace, MemorySpace, reference_solver_type>>(
             pm, bc, ps, density, delta_t );

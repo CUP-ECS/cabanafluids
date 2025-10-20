@@ -60,7 +60,7 @@ class Solver<2, ExecutionSpace, MemorySpace> : public SolverBase
 {
   public:
     using device_type = Kokkos::Device<ExecutionSpace, MemorySpace>;
-    using mesh_type = Cabana::UniformMesh<double, 2>;
+    using mesh_type = Cabana::Grid::UniformMesh<double, 2>;
     using cell_array =
         Cabana::Grid::Array<double, Cabana::Grid::Cell, mesh_type, MemorySpace>;
     using pm_type = ProblemManager<2, ExecutionSpace, MemorySpace>;
@@ -191,7 +191,7 @@ class Solver<2, ExecutionSpace, MemorySpace> : public SolverBase
         double cell_area = cell_size * cell_size;
 
         auto owned_cells = local_grid.indexSpace( Cabana::Grid::Own(), Cabana::Grid::Cell(),
-                                                  Cabana::Local() );
+                                                  Cabana::Grid::Local() );
 
         // Create local variable versions of the class members to avoid needing
         // to use a (potentially expensive) class lambda
@@ -221,7 +221,7 @@ class Solver<2, ExecutionSpace, MemorySpace> : public SolverBase
 
         Kokkos::Profiling::pushRegion( "Solve::AddInputs::FaceI" );
         auto owned_ifaces =
-            local_grid.indexSpace( Cabana::Grid::Own(), FaceI(), Cabana::Local() );
+            local_grid.indexSpace( Cabana::Grid::Own(), FaceI(), Cabana::Grid::Local() );
         auto ui = _pm->get( FaceI(), Field::Velocity(), Version::Current() );
         auto l2g_facei =
             Cabana::Grid::IndexConversion::createL2G( local_grid, FaceI() );
@@ -245,7 +245,7 @@ class Solver<2, ExecutionSpace, MemorySpace> : public SolverBase
 
         Kokkos::Profiling::pushRegion( "Solve::AddInputs::FaceJ" );
         auto owned_jfaces =
-            local_grid.indexSpace( Cabana::Grid::Own(), FaceJ(), Cabana::Local() );
+            local_grid.indexSpace( Cabana::Grid::Own(), FaceJ(), Cabana::Grid::Local() );
         auto uj = _pm->get( FaceJ(), Field::Velocity(), Version::Current() );
         auto l2g_facej =
             Cabana::Grid::IndexConversion::createL2G( local_grid, FaceJ() );

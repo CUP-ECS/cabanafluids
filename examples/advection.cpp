@@ -442,7 +442,7 @@ void advect( ClArgs& cl )
     MPI_Comm_rank( MPI_COMM_WORLD, &rank );      // Get My Rank
 
     Cabana::Grid::DimBlockPartitioner<2> partitioner; // Create Cabana Grid Partitioner
-    Cabana::Grid::BoundaryCondition<2> bc;
+    CabanaFluids::BoundaryCondition<2> bc;
     bc.boundary_type = {
         CabanaFluids::BoundaryType::SOLID, CabanaFluids::BoundaryType::SOLID,
         CabanaFluids::BoundaryType::SOLID, CabanaFluids::BoundaryType::SOLID };

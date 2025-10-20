@@ -100,7 +100,6 @@ class ProblemManager<2, ExecutionSpace, MemorySpace>
   public:
     using memory_space = MemorySpace;
     using execution_space = ExecutionSpace;
-    using device_type = Kokkos::Device<ExecutionSpace, MemorySpace>;
 
     using Cell = Cabana::Grid::Cell;
     using FaceI = Cabana::Grid::Face<Cabana::Grid::Dim::I>;
@@ -121,7 +120,7 @@ class ProblemManager<2, ExecutionSpace, MemorySpace>
     using kface_array =
         Cabana::Grid::Array<double, Cabana::Grid::Face<Cabana::Grid::Dim::K>,
                       Cabana::Grid::UniformMesh<double, 2>, MemorySpace>;
-    using halo_type = Cabana::Halo<MemorySpace>;
+    using halo_type = Cabana::Grid::Halo<MemorySpace>;
     using mesh_type = Mesh<2, ExecutionSpace, MemorySpace>;
 
     template <class InitFunc>
