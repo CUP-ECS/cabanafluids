@@ -317,12 +317,20 @@ createVelocityCorrector( const std::shared_ptr<ProblemManagerType>& pm,
         auto ps =
             Cabana::Grid::createReferenceConjugateGradient<double, MemorySpace>(
                 *vector_layout );
+        if ( ( precon.compare( "Jacobi" ) != 0 ) 
+             && ( precon.compare( "Diagonal" ) != 0 ) )
+        {
+            std::cerr << "Reference solver reqires on Jacobi preconditioner."
+                      << std::endl;
+            exit(-1);
+        }
         return std::make_shared<CabanaFluids::VelocityCorrector<
             NumSpaceDims, ExecutionSpace, MemorySpace, reference_solver_type>>(
             pm, bc, ps, density, delta_t );
     }
     else
     {
+        HYPRE_Init(); // Cabana requires we explicitly init HYPRE here.
         auto ps =
             Cabana::Grid::createHypreStructuredSolver<double, MemorySpace>(
                 solver, *vector_layout );
