@@ -183,7 +183,7 @@ int parseInput( const int rank, const int argc, char** argv, ClArgs& cl )
     cl.density = 0.1;
     cl.gravity = 0.0;
 
-    // Default to the Hypre conjugate gradient solver with a simple 
+    // Default to the Hypre conjugate gradient solver with a simple
     // jacobi preconditioner
     cl.solver = "Reference";
     cl.precon = "Jacobi";
