@@ -57,9 +57,11 @@ class VelocityCorrector<2, ExecutionSpace, MemorySpace, SparseSolver>
         Cabana::Grid::Array<double, Cabana::Grid::Cell, mesh_type, MemorySpace>;
     using pm_type = ProblemManager<2, ExecutionSpace, MemorySpace>;
     using bc_type = BoundaryCondition<2>;
+#ifdef Cabana_ENABLE_HYPRE
     using hypre_solver_type =
         Cabana::Grid::HypreStructuredSolver<double, Cabana::Grid::Cell,
                                             MemorySpace>;
+#endif
     using reference_solver_type =
         Cabana::Grid::ReferenceStructuredSolver<double, Cabana::Grid::Cell,
                                                 mesh_type, MemorySpace>;
@@ -143,6 +145,7 @@ class VelocityCorrector<2, ExecutionSpace, MemorySpace, SparseSolver>
             } );
     }
 
+#ifdef Cabana_ENABLE_HYPRE
     // Specialization of matrix fill for Hypre
     void fillMatrixValues( std::shared_ptr<hypre_solver_type>& solver )
     {
@@ -153,6 +156,7 @@ class VelocityCorrector<2, ExecutionSpace, MemorySpace, SparseSolver>
         initializeMatrixValues( matrix_entries->view() );
         solver->setMatrixValues( *matrix_entries );
     }
+#endif
 
     // Specialization of matrix fill for the Cabana structured solver
     void fillMatrixValues( std::shared_ptr<reference_solver_type>& solver )
@@ -303,9 +307,11 @@ createVelocityCorrector( const std::shared_ptr<ProblemManagerType>& pm,
                          std::string precon )
 {
     using mesh_type = Cabana::Grid::UniformMesh<double, 2>;
+#ifdef Cabana_ENABLE_HYPRE
     using hypre_solver_type =
         Cabana::Grid::HypreStructuredSolver<double, Cabana::Grid::Cell,
                                             MemorySpace>;
+#endif
     using reference_solver_type =
         Cabana::Grid::ReferenceStructuredSolver<double, Cabana::Grid::Cell,
                                                 mesh_type, MemorySpace>;
@@ -320,7 +326,7 @@ createVelocityCorrector( const std::shared_ptr<ProblemManagerType>& pm,
         if ( ( precon.compare( "Jacobi" ) != 0 ) 
              && ( precon.compare( "Diagonal" ) != 0 ) )
         {
-            std::cerr << "Reference solver reqires on Jacobi preconditioner."
+            std::cerr << "Reference solver supports only Jacobi preconditioner."
                       << std::endl;
             exit(-1);
         }
@@ -330,6 +336,7 @@ createVelocityCorrector( const std::shared_ptr<ProblemManagerType>& pm,
     }
     else
     {
+#ifdef Cabana_ENABLE_HYPRE
         HYPRE_Init(); // Cabana requires we explicitly init HYPRE here.
         auto ps =
             Cabana::Grid::createHypreStructuredSolver<double, MemorySpace>(
@@ -344,7 +351,13 @@ createVelocityCorrector( const std::shared_ptr<ProblemManagerType>& pm,
         return std::make_shared<CabanaFluids::VelocityCorrector<
             NumSpaceDims, ExecutionSpace, MemorySpace, hypre_solver_type>>(
             pm, bc, ps, density, delta_t );
+#else
+            std::cerr << "Only reference solver available without hypre."
+                      << std::endl;
+            exit(-1);
+#endif
     }
+
 }
 
 } // namespace CabanaFluids

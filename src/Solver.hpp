@@ -16,11 +16,6 @@
 #include <Cabana_Grid.hpp>
 #include <Kokkos_Core.hpp>
 
-#include <Cabana_Grid_HypreStructuredSolver.hpp>
-// #include <Cabana_Partitioner.hpp>
-// #include <Cabana_ReferenceStructuredSolver.hpp>
-// #include <Cabana_Types.hpp>
-
 #include <BodyForce.hpp>
 #include <BoundaryConditions.hpp>
 #include <InflowSource.hpp>
