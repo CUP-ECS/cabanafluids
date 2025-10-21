@@ -1,20 +1,22 @@
 /****************************************************************************
- * Copyright (c) 2021 by the CajitaFluids authors                      *
+ * Copyright (c) 2021 by the CabanaFluids authors                      *
  * All rights reserved.                                                     *
  *                                                                          *
- * This file is part of the CajitaFluids benchmark. CajitaFluids is         *
+ * This file is part of the CabanaFluids benchmark. CabanaFluids is         *
  * distributed under a BSD 3-clause license. For the licensing terms see    *
  * the LICENSE file in the top-level directory.                             *
  *                                                                          *
  * SPDX-License-Identifier: BSD-3-Clause                                    *
  ****************************************************************************/
 
-#ifndef CAJITAFLUIDS_MESH_HPP
-#define CAJITAFLUIDS_MESH_HPP
+#ifndef CABANAFLUIDS_MESH_HPP
+#define CABANAFLUIDS_MESH_HPP
 
-#include <Cajita.hpp>
-
+#include <Cabana_Core.hpp>
+#include <Cabana_Grid.hpp>
 #include <Kokkos_Core.hpp>
+
+#include <Mesh.hpp>
 
 #include <memory>
 
@@ -22,7 +24,7 @@
 
 #include <limits>
 
-namespace CajitaFluids
+namespace CabanaFluids
 {
 //---------------------------------------------------------------------------//
 /*!
@@ -34,13 +36,13 @@ class Mesh
 {
   public:
     using memory_space = MemorySpace;
-    using device_type = Kokkos::Device<ExecutionSpace, MemorySpace>;
-    using mesh_type = Cajita::UniformMesh<double, Dim>;
+    // using device_type = Kokkos::Device<ExecutionSpace, MemorySpace>;
+    using mesh_type = Cabana::Grid::UniformMesh<double, Dim>;
 
     // Construct a mesh.
     Mesh( const Kokkos::Array<double, 2 * Dim>& global_bounding_box,
           const std::array<int, Dim>& global_num_cell,
-          const Cajita::BlockPartitioner<Dim>& partitioner,
+          const Cabana::Grid::BlockPartitioner<Dim>& partitioner,
           const int halo_cell_width, MPI_Comm comm )
     {
         // Make a copy of the global number of cells so we can modify it.
@@ -78,7 +80,7 @@ class Mesh
         }
 
         // Create the global mesh.
-        auto global_mesh = Cajita::createUniformGlobalMesh(
+        auto global_mesh = Cabana::Grid::createUniformGlobalMesh(
             global_low_corner, global_high_corner, num_cell );
 
         // Build the global grid.
@@ -86,30 +88,31 @@ class Mesh
         for ( int i = 0; i < Dim; i++ )
             periodic[i] = false;
 
-        auto global_grid = Cajita::createGlobalGrid( comm, global_mesh,
-                                                     periodic, partitioner );
+        auto global_grid = Cabana::Grid::createGlobalGrid(
+            comm, global_mesh, periodic, partitioner );
 
         // Build the local grid.
         int halo_width = halo_cell_width;
-        _local_grid = Cajita::createLocalGrid( global_grid, halo_width );
+        _local_grid = Cabana::Grid::createLocalGrid( global_grid, halo_width );
 
         // Build the local mesh. XXX Why is this hard to share? Is it expensive?
-        auto local_mesh = Cajita::createLocalMesh<device_type>( *_local_grid );
+        auto local_mesh =
+            Cabana::Grid::createLocalMesh<memory_space>( *_local_grid );
         _local_mesh =
-            std::make_shared<Cajita::LocalMesh<device_type, mesh_type>>(
+            std::make_shared<Cabana::Grid::LocalMesh<memory_space, mesh_type>>(
                 local_mesh );
 
         MPI_Comm_rank( comm, &_rank );
     }
 
     // Get the local grid.
-    const std::shared_ptr<Cajita::LocalGrid<mesh_type>>& localGrid() const
+    const std::shared_ptr<Cabana::Grid::LocalGrid<mesh_type>>& localGrid() const
     {
         return _local_grid;
     }
 
     // Get the local mesh.
-    const std::shared_ptr<Cajita::LocalMesh<device_type, mesh_type>>&
+    const std::shared_ptr<Cabana::Grid::LocalMesh<memory_space, mesh_type>>&
     localMesh() const
     {
         return _local_mesh;
@@ -136,8 +139,9 @@ class Mesh
     int rank() const { return _rank; }
 
   public:
-    std::shared_ptr<Cajita::LocalGrid<mesh_type>> _local_grid;
-    std::shared_ptr<Cajita::LocalMesh<device_type, mesh_type>> _local_mesh;
+    std::shared_ptr<Cabana::Grid::LocalGrid<mesh_type>> _local_grid;
+    std::shared_ptr<Cabana::Grid::LocalMesh<memory_space, mesh_type>>
+        _local_mesh;
 
     Kokkos::Array<int, Dim> _min_domain_global_cell_index;
     Kokkos::Array<int, Dim> _max_domain_global_cell_index;
@@ -146,6 +150,6 @@ class Mesh
 
 //---------------------------------------------------------------------------//
 
-} // end namespace CajitaFluids
+} // end namespace CabanaFluids
 
 #endif // end CAJITAFLUIDS_MESH_HPP

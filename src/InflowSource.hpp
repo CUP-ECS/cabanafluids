@@ -3,22 +3,24 @@
  * @author Patrick Bridges <patrickb@unm.edu>
  *
  * @section DESCRIPTION
- * Inflow Sources Conditions for CajitaFluids
+ * Inflow Sources Conditions for CabanaFluids
  */
 
-#ifndef CAJITAFLUIDS_INFLOWSOURCE_HPP
-#define CAJITAFLUIDS_INFLOWSOURCE_HPP
+#ifndef CABANAFLUIDS_INFLOWSOURCE_HPP
+#define CABANAFLUIDS_INFLOWSOURCE_HPP
 
 #ifndef DEBUG
 #define DEBUG 0
 #endif
 
 // Include Statements
-#include <Mesh.hpp>
-
+#include <Cabana_Core.hpp>
+#include <Cabana_Grid.hpp>
 #include <Kokkos_Core.hpp>
 
-namespace CajitaFluids
+#include <Mesh.hpp>
+
+namespace CabanaFluids
 {
 /**
  * @struct InflowSource
@@ -31,8 +33,8 @@ template <>
 struct InflowSource<2>
 {
     template <class ArrayType>
-    KOKKOS_INLINE_FUNCTION void operator()( Cajita::Cell, ArrayType& q, int i,
-                                            int j, double x, double y,
+    KOKKOS_INLINE_FUNCTION void operator()( Cabana::Grid::Cell, ArrayType& q,
+                                            int i, int j, double x, double y,
                                             [[maybe_unused]] double delta_t,
                                             [[maybe_unused]] double v ) const
     {
@@ -51,8 +53,8 @@ struct InflowSource<2>
 
     template <class ArrayType>
     KOKKOS_INLINE_FUNCTION void
-    operator()( Cajita::Face<Cajita::Dim::I>, ArrayType& ux, int i, int j,
-                double x, double y, [[maybe_unused]] double delta_t,
+    operator()( Cabana::Grid::Face<Cabana::Grid::Dim::I>, ArrayType& ux, int i,
+                int j, double x, double y, [[maybe_unused]] double delta_t,
                 [[maybe_unused]] double v ) const
     {
         if ( x >= _bounding_box[0] && x < _bounding_box[2] &&
@@ -65,8 +67,8 @@ struct InflowSource<2>
 
     template <class ArrayType>
     KOKKOS_INLINE_FUNCTION void
-    operator()( Cajita::Face<Cajita::Dim::J>, ArrayType& uy, int i, int j,
-                double x, double y, [[maybe_unused]] double delta_t,
+    operator()( Cabana::Grid::Face<Cabana::Grid::Dim::J>, ArrayType& uy, int i,
+                int j, double x, double y, [[maybe_unused]] double delta_t,
                 [[maybe_unused]] double v ) const
     {
         if ( x >= _bounding_box[0] && x < _bounding_box[2] &&
@@ -97,6 +99,6 @@ struct InflowSource<2>
                                            to force at location*/
 };
 
-} // namespace CajitaFluids
+} // namespace CabanaFluids
 
 #endif

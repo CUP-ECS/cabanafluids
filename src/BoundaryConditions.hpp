@@ -4,22 +4,24 @@
  * @author Jered Dominguez-Trujillo <jereddt@unm.edu>
  *
  * @section DESCRIPTION
- * Boundary Conditions for ExaCLAMR Shallow Water Solver
+ * Boundary Conditions for CabanaFluids advection solver
  */
 
-#ifndef EXACLAMR_BOUNDARYCONDITIONS_HPP
-#define EXACLAMR_BOUNDARYCONDITIONS_HPP
+#ifndef CABANAFLUIDS_BOUNDARYCONDITIONS_HPP
+#define CABANAFLUIDS_BOUNDARYCONDITIONS_HPP
 
 #ifndef DEBUG
 #define DEBUG 0
 #endif
 
 // Include Statements
-#include <Mesh.hpp>
-
+#include <Cabana_Core.hpp>
+#include <Cabana_Grid.hpp>
 #include <Kokkos_Core.hpp>
 
-namespace CajitaFluids
+#include <Mesh.hpp>
+
+namespace CabanaFluids
 {
 /**
  * @struct BoundaryType
@@ -50,9 +52,9 @@ struct BoundaryCondition;
 template <>
 struct BoundaryCondition<2>
 {
-    using Cell = Cajita::Cell;
-    using FaceI = Cajita::Face<Cajita::Dim::I>;
-    using FaceJ = Cajita::Face<Cajita::Dim::J>;
+    using Cell = Cabana::Grid::Cell;
+    using FaceI = Cabana::Grid::Face<Cabana::Grid::Dim::I>;
+    using FaceJ = Cabana::Grid::Face<Cabana::Grid::Dim::J>;
     template <class ArrayType>
     KOKKOS_INLINE_FUNCTION void
     build_matrix( const int gi, const int gj, const int i, const int j,
@@ -134,6 +136,6 @@ struct BoundaryCondition<2>
     Kokkos::Array<int, 2> max;
 };
 
-} // namespace CajitaFluids
+} // namespace CabanaFluids
 
 #endif
