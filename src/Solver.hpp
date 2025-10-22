@@ -334,7 +334,7 @@ createSolver( const std::string& device, MPI_Comm comm,
     {
 #ifdef KOKKOS_ENABLE_HIP
         return std::make_shared<CabanaFluids::Solver<
-            2, Kokkos : Experimental::HIP, Kokkos::Experimental::HIPSpace>>(
+            2, Kokkos::HIP, Kokkos::HIPSpace>>(
             comm, global_bounding_box, global_num_cell, partitioner, density,
             create_functor, bc, source, body, delta_t, matrix_solver,
             preconditioner );

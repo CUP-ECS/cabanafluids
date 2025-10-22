@@ -1,26 +1,9 @@
-blt_add_executable(NAME tstMesh
-                   SOURCES tstMesh.cpp 
-                   INCLUDES tstMesh.hpp 
-                   DEPENDS_ON cabanafluids gtest)
-blt_add_test(NAME MeshTests
-             COMMAND tstMesh)
+# We use the cabana test harness here for test cases. It is in root/cmake/test_harness
 
-blt_add_executable(NAME tstProblemManager
-                   SOURCES tstProblemManager.cpp 
-                   INCLUDES tstProblemManager.hpp tstMesh.hpp 
-                   DEPENDS_ON cabanafluids gtest)
-blt_add_test(NAME ProblemManagerTests
-             COMMAND tstProblemManager)
+set(MPI_TESTS
+  Mesh
+  ProblemManager
+  BoundaryConditions
+  )
 
-blt_add_executable(NAME tstBoundaryConditions
-                   SOURCES tstBoundaryConditions.cpp 
-                   INCLUDES tstoundaryConditions.hpp tstProblemManager.hpp tstMesh.hpp 
-                   DEPENDS_ON cabanafluids gtest)
-blt_add_test(NAME BoundaryConditionTests
-             COMMAND tstBoundaryConditions)
-
-#blt_add_executable(NAME tstInflowSource
-#                   SOURCES tstInflowSource.cpp
-#                   INCLUDES tstMeshSetup.hpp
-#                   DEPENDS_ON cabanafluids gtest)
-#blt_add_test(tstInflowSource)
+Cabana_add_tests(MPI PACKAGE cabanafluids NAMES ${MPI_TESTS})
