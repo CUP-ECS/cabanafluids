@@ -104,7 +104,7 @@ void help( const int rank, char* progname )
     {
         std::cout << "Usage: " << progname << "\n";
         std::cout << std::left << std::setw( 10 ) << "-p" << std::setw( 40 )
-                  << "On-node Parallelism Model (default serial)" << std::left
+                  << "On-node Parallelism Model (default \"default\")" << std::left
                   << "\n";
         std::cout << std::left << std::setw( 10 ) << "-s" << std::setw( 40 )
                   << "Size of domain (default 1.0)" << std::left << "\n";
@@ -162,15 +162,7 @@ int parseInput( const int rank, const int argc, char** argv, ClArgs& cl )
 
     /// Set default values
 
-    // If we're using CUDA, then HYPRE is cuda-enabled, state must exist on
-    // the device, and serial won't work so make cuda the default
-    // If we're
-#ifdef KOKKOS_ENABLE_CUDA
-    cl.device = "cuda"; // Default Thread Setting
-#else
-    cl.device = "serial"; // Default Thread Setting
-#endif
-
+    cl.device = "default"; // Default Thread Setting
     cl.t_final = 4.0;
     cl.delta_t = 0.005;
     cl.write_freq = 20;
@@ -259,8 +251,10 @@ int parseInput( const int rank, const int argc, char** argv, ClArgs& cl )
             break;
         case 'p':
             cl.device = strdup( optarg );
-            if ( ( cl.device.compare( "serial" ) != 0 ) &&
+            if ( ( cl.device.compare( "default" ) != 0 ) &&
+		 ( cl.device.compare( "serial" ) != 0 ) &&
                  ( cl.device.compare( "cuda" ) != 0 ) &&
+                 ( cl.device.compare( "hip" ) != 0 ) &&
                  ( cl.device.compare( "openmp" ) != 0 ) &&
                  ( cl.device.compare( "pthreads" ) != 0 ) )
             {

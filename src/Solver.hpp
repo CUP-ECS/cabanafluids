@@ -292,11 +292,19 @@ createSolver( const std::string& device, MPI_Comm comm,
               const std::string& matrix_solver,
               const std::string& preconditioner )
 {
-    if ( 0 == device.compare( "serial" ) )
+    if (0 == device.compare( "default" ) )
     {
-// Hypre with CUDA support breaks support for the serial solver. We'll need
+        return std::make_shared<
+            CabanaFluids::Solver<2, Kokkos::DefaultExecutionSpace, Kokkos::DefaultExecutionSpace::memory_space>>(
+            comm, global_bounding_box, global_num_cell, partitioner, density,
+            create_functor, bc, source, body, delta_t, matrix_solver,
+            preconditioner );
+    } 
+    else if ( 0 == device.compare( "serial" ) )
+    {
+// Hypre with CUDA or HIP support breaks support for the serial solver. We'll need
 // to set it up to use a different solver in that case
-#if defined( KOKKOS_ENABLE_SERIAL ) && !defined( KOKKOS_ENABLE_CUDA )
+#if defined( KOKKOS_ENABLE_SERIAL ) && !defined( KOKKOS_ENABLE_CUDA ) && !defined( KOKKOS_ENABLE_HIP )
         return std::make_shared<
             CabanaFluids::Solver<2, Kokkos::Serial, Kokkos::HostSpace>>(
             comm, global_bounding_box, global_num_cell, partitioner, density,
@@ -308,7 +316,7 @@ createSolver( const std::string& device, MPI_Comm comm,
     }
     else if ( 0 == device.compare( "openmp" ) )
     {
-#if defined( KOKKOS_ENABLE_OPENMP ) && !defined( KOKKOS_ENABLE_CUDA )
+#if defined( KOKKOS_ENABLE_OPENMP ) && !defined( KOKKOS_ENABLE_CUDA ) && !defined( KOKKOS_ENABLE_HIP )
         return std::make_shared<
             CabanaFluids::Solver<2, Kokkos::OpenMP, Kokkos::HostSpace>>(
             comm, global_bounding_box, global_num_cell, partitioner, density,

@@ -21,6 +21,7 @@
 #include <Mesh.hpp>
 #include <ProblemManager.hpp>
 
+#include <cmath>
 #include <memory>
 #include <string>
 
@@ -102,8 +103,17 @@ class VelocityCorrector<2, ExecutionSpace, MemorySpace, SparseSolver>
         // Fill the associated matrix assocuated with with values
         fillMatrixValues( _pressure_solver );
 
+	// Put a high limit on iteration count, assuming we're using
+	// a roughly preconditioned CG solver
+	int ncells = 1;
+        auto gmesh = _mesh->localGrid()->globalGrid().globalMesh();
+	for (int i = 0; i < 2; i++) {
+	    ncells = gmesh.globalNumCell(i);
+	}
+	int itermax = 10 * sqrt((double)ncells);
+
         _pressure_solver->setTolerance( 1.0e-6 );
-        _pressure_solver->setMaxIter( 2000 );
+        _pressure_solver->setMaxIter( itermax );
         _pressure_solver->setPrintLevel( 0 );
         _pressure_solver->setup();
 
