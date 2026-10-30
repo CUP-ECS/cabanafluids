@@ -1,4 +1,4 @@
-# Poisson MPI Benchmark
+# CabanaFluids
 This directory contains code for a relatively simple finite difference 
 fluid advection solver for exploring communication issues on modern architectures
 (particularly GPUs). The main goal is to look at different neighbor collective

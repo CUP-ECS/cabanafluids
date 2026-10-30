@@ -60,7 +60,8 @@ class Mesh
             double extent = num_cell[d] * cell_size;
             if ( std::abs( extent - ( global_bounding_box[d + Dim] -
                                       global_bounding_box[d] ) ) >
-                 double( 10.0 ) * std::numeric_limits<double>::epsilon() )
+                 double( 10.0 ) * std::numeric_limits<double>::epsilon() *
+                     std::abs( extent ) )
                 throw std::logic_error(
                     "Extent not evenly divisible by uniform cell size" );
         }

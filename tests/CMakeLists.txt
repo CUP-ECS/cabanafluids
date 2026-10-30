@@ -4,6 +4,8 @@ set(MPI_TESTS
   Mesh
   ProblemManager
   BoundaryConditions
+  TimeIntegrator
+  VelocityCorrector
   )
 
 Cabana_add_tests(MPI PACKAGE cabanafluids NAMES ${MPI_TESTS})
