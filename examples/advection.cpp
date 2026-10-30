@@ -4,7 +4,7 @@
  * @author Jered Dominguez-Trujillo <jereddt@unm.edu>
  *
  * @section DESCRIPTION
- * Simple fluid advection in a domain closed in Y and open in X
+ * Simple fluid advection in a domain closed on all four sides
  * with a single input source.
  */
 
@@ -38,9 +38,9 @@ using namespace CabanaFluids;
 
 // Short Args: n - Cell Count, s - Domain Size,
 // x - On-node Parallelism ( Serial/Threaded/OpenMP/CUDA ),
-// t - Time Steps, w - Write Frequency
+// t - Time Steps, f - Write Frequency
 // d - Input Density, i - Input Location, v - Inflow Velocity
-static char* shortargs = (char*)"n:s:t:i:d:g:p:m:c:x:y:w:h:q:u:v:";
+static char* shortargs = (char*)"n:s:t:i:f:d:g:p:m:c:x:y:w:h:q:u:v:";
 
 static option longargs[] = {
     // Basic simulation parameters
@@ -48,6 +48,7 @@ static option longargs[] = {
     { "size", required_argument, NULL, 's' },
     { "time", required_argument, NULL, 't' },
     { "deltat", required_argument, NULL, 'i' },
+    { "write-freq", required_argument, NULL, 'f' },
     { "density", required_argument, NULL, 'd' },
     { "gravity", required_argument, NULL, 'g' },
     { "driver", required_argument, NULL, 'p' },
@@ -113,9 +114,9 @@ void help( const int rank, char* progname )
         std::cout << std::left << std::setw( 10 ) << "-t" << std::setw( 40 )
                   << "Amount of time to simulate (default 4.0)" << std::left
                   << "\n";
-        std::cout << std::left << std::setw( 10 ) << "-t" << std::setw( 40 )
-                  << "Timestep increment (default 0.005)" << std::left << "\n";
-        std::cout << std::left << std::setw( 10 ) << "-w" << std::setw( 40 )
+        std::cout << std::left << std::setw( 10 ) << "-i" << std::setw( 40 )
+                  << "Maximum timestep (default 0.005)" << std::left << "\n";
+        std::cout << std::left << std::setw( 10 ) << "-f" << std::setw( 40 )
                   << "Write Frequency (default 20)" << std::left << "\n";
         std::cout << std::left << std::setw( 10 ) << "-d" << std::setw( 40 )
                   << "Fluid Density (default 0.1)" << std::left << "\n";
@@ -126,13 +127,13 @@ void help( const int rank, char* progname )
         std::cout << std::left << std::setw( 10 ) << "-y" << std::setw( 40 )
                   << "Inflow Y Location (default 0.45)" << std::left << "\n";
         std::cout << std::left << std::setw( 10 ) << "-w" << std::setw( 40 )
-                  << "Inflow Width (default 0.001)" << std::left << "\n";
+                  << "Inflow Width (default 0.02)" << std::left << "\n";
         std::cout << std::left << std::setw( 10 ) << "-h" << std::setw( 40 )
                   << "Inflow Height (default 0.1)" << std::left << "\n";
         std::cout << std::left << std::setw( 10 ) << "-u" << std::setw( 40 )
-                  << "Inflow X Velocity (default 0)" << std::left << "\n";
+                  << "Inflow X Velocity (default 1.0)" << std::left << "\n";
         std::cout << std::left << std::setw( 10 ) << "-v" << std::setw( 40 )
-                  << "Inflow Y Velocity (default 1.0)" << std::left << "\n";
+                  << "Inflow Y Velocity (default 0)" << std::left << "\n";
         std::cout << std::left << std::setw( 10 ) << "-q" << std::setw( 40 )
                   << "Inflow Quantity (default 3.0)" << std::left << "\n";
 
@@ -140,7 +141,7 @@ void help( const int rank, char* progname )
         std::cout << std::left << std::setw( 10 ) << "-g" << std::setw( 40 )
                   << "Gravity (default 0.0)" << std::left << "\n";
 
-        std::cout << std::left << std::setw( 10 ) << "-h" << std::setw( 40 )
+        std::cout << std::left << std::setw( 10 ) << "--help" << std::setw( 40 )
                   << "Print Help Message" << std::left << "\n";
     }
 }
@@ -211,7 +212,7 @@ int parseInput( const int rank, const int argc, char** argv, ClArgs& cl )
         case 's':
             cl.global_bounding_box[2] = atof( optarg );
 
-            if ( cl.global_bounding_box[3] <= 0.0 )
+            if ( cl.global_bounding_box[2] <= 0.0 )
             {
                 if ( rank == 0 )
                 {
@@ -238,11 +239,23 @@ int parseInput( const int rank, const int argc, char** argv, ClArgs& cl )
             break;
         case 'i':
             cl.delta_t = atof( optarg );
-            if ( cl.t_final <= 0.0 )
+            if ( cl.delta_t <= 0.0 )
             {
                 if ( rank == 0 )
                 {
                     std::cerr << "Invalid timestep increment argument.\n";
+                    help( rank, argv[0] );
+                }
+                exit( -1 );
+            }
+            break;
+        case 'f':
+            cl.write_freq = atoi( optarg );
+            if ( cl.write_freq <= 0 )
+            {
+                if ( rank == 0 )
+                {
+                    std::cerr << "Invalid write frequency argument.\n";
                     help( rank, argv[0] );
                 }
                 exit( -1 );
@@ -262,7 +275,7 @@ int parseInput( const int rank, const int argc, char** argv, ClArgs& cl )
             if ( ( cl.device.compare( "serial" ) != 0 ) &&
                  ( cl.device.compare( "cuda" ) != 0 ) &&
                  ( cl.device.compare( "openmp" ) != 0 ) &&
-                 ( cl.device.compare( "pthreads" ) != 0 ) )
+                 ( cl.device.compare( "hip" ) != 0 ) )
             {
                 if ( rank == 0 )
                 {
@@ -503,7 +516,7 @@ int main( int argc, char* argv[] )
                   << std::setw( 8 ) << cl.inVelocity[1] << " )\n";
         std::cout << std::left << std::setw( 20 ) << "Total Simulation Time"
                   << ": " << std::setw( 8 ) << cl.t_final << "\n";
-        std::cout << std::left << std::setw( 20 ) << "Timestep Size"
+        std::cout << std::left << std::setw( 20 ) << "Maximum Timestep"
                   << ": " << std::setw( 8 ) << cl.delta_t << "\n";
         std::cout << std::left << std::setw( 20 ) << "Write Frequency"
                   << ": " << std::setw( 8 ) << cl.write_freq

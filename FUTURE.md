@@ -2,126 +2,58 @@
 
 This document records known bugs, a plan for unit tests, and a plan for
 moving the advection step to a robust, well-documented finite difference
-scheme. Line numbers refer to commit `b5284b9`.
+scheme.
 
-## 1. Known and Suspected Bugs
+## 1. Known Bugs
 
-Fix each bug red-green: write the failing test from Section 2 first, then
-fix the code.
+**Cubic interpolation smooths the field every step.**
+`src/TimeIntegrator.hpp:155` interpolates the advected quantity with
+`Cabana::Grid` order-3 splines. These are cubic B-splines, which
+approximate rather than interpolate: they do not reproduce grid values.
+Even with zero velocity, each step blurs the field with weights
+(1/6, 4/6, 1/6) per dimension. This adds large numerical diffusion.
+Fixing it means changing the interpolation in the advection scheme, so
+the scheme replacement in Section 3 resolves it.
 
-### Correctness bugs in the solver
+### Fixed bugs
 
-1. **J-face boundary condition applied to `u`.**
-   `src/VelocityCorrector.hpp:264` calls `bc( FaceJ(), u, ... )` instead of
-   `bc( FaceJ(), v, ... )`. After the pressure correction the code never
-   zeroes `v` on the top and bottom walls, so fluid leaks through them.
-   It also zeroes entries of `u` at J-face indices, including a ghost row.
+The following bugs from the original review are fixed, each with a test
+where one could be written:
 
-2. **RK3 back-trace is only second order.**
-   `src/TimeIntegrator.hpp:58-59` computes the third stage position from
-   `v0`. Ralston's RK3, whose weights (2/9, 3/9, 4/9) the code uses,
-   needs `x2 = x0 - 0.75 * dt * v1`. With `v0` the order condition
-   `b3 * a32 * c2 = 1/6` fails. Line 61 has a second error in the 3D path:
-   it writes `x1[2]` with factor 0.5 instead of `x2[2]` with 0.75.
-
-3. **Cubic interpolation smooths the field every step.**
-   `src/TimeIntegrator.hpp:114` interpolates the advected quantity with
-   `Cabana::Grid` order-3 splines. These are cubic B-splines, which
-   approximate rather than interpolate: they do not reproduce grid values.
-   Even with zero velocity, each step blurs the field with weights
-   (1/6, 4/6, 1/6) per dimension. This adds large numerical diffusion.
-
-4. **Ghost cells at physical walls are never filled.**
-   Halo gathers fill ghosts only between ranks. Ghosts outside the
-   physical domain keep their initial value of zero. Back-traces near a
-   wall interpolate those zeros, so the quantity and the velocity decay
-   along walls.
-
-5. **Back-traces can leave the allocated halo.**
-   `src/TimeIntegrator.hpp:100-116` never clamps the traced point.
-   `src/Solver.hpp:95-105` picks `dt` once, from the inflow velocity and
-   body force, but the pressure correction can produce faster flow. If a
-   trace moves more than about one cell, the cubic stencil reads past the
-   3-cell halo: an out-of-bounds view access, which corrupts memory or
-   crashes on a GPU. The time step should be recomputed from the actual
-   maximum velocity (a global `MPI_Allreduce`) each step.
-
-6. **Singular pressure system with all-solid walls.**
-   The example sets all four walls `SOLID`
-   (`examples/advection.cpp:447-449`), so the matrix is a pure Neumann
-   Laplacian with a constant null space. CG converges only if the
-   right-hand side has zero mean. Round-off breaks that, and nothing pins
-   the pressure or removes the mean.
-
-### Bugs in infrastructure and the driver
-
-7. **Unbalanced profiling regions.** In `src/TimeIntegrator.hpp:164-177`,
-   the `popRegion` for "Advance" sits inside the 3D-only branch. In 2D the
-   final `popRegion` closes "Advance" and leaves "TimeIntegrator::Step"
-   open every step.
-8. **HIP backend does not compile.** `src/Solver.hpp:337` has
-   `Kokkos : Experimental::HIP` (one colon).
-9. **3D advection call is missing an argument.**
-   `src/TimeIntegrator.hpp:158` omits `bc`. This is latent until 3D is
-   built.
-10. **Mesh divisibility check uses an absolute tolerance.**
-    `src/Mesh.hpp:61-63` compares extents against `10 * epsilon`, which
-    does not scale with the domain size. Large domains can throw a
-    spurious `logic_error`. Use a relative tolerance.
-11. **Initial output is overwritten.** `src/Solver.hpp:155` writes step 0,
-    then the loop at lines 171-174 writes step 0 again after the first
-    step. The `strdup( "Mesh" )` calls leak.
-12. **Velocity output reads stale ghosts.** `_applyPressure` updates owned
-    faces but does not gather afterward. `src/SiloWriter.hpp:183-194` then
-    interpolates cell-centered velocity from ghost faces on rank
-    boundaries that predate the correction.
-13. **Initializer receives local indices.** `src/ProblemManager.hpp:214`
-    passes local `(i, j)` to the init functor as `coords`. A functor that
-    expects global indices behaves differently on each rank. Pass global
-    indices or document the contract.
-14. **Inconsistent index conversion.**
-    `src/VelocityCorrector.hpp:228-229` builds a `Cell` L2G and applies it
-    to face indices; `src/Solver.hpp:221` uses face L2G. The two agree for
-    non-periodic grids only.
-15. **Command-line parsing in `examples/advection.cpp`.**
-    - Line 214 validates `global_bounding_box[3]` before assigning it;
-      it should check `[2]`.
-    - Line 241 validates `t_final` instead of `delta_t`.
-    - `-w` sets the inflow width, so the write frequency cannot be set;
-      `-h` sets inflow height, so only `--help` prints help.
-    - The help text lists `-t` twice, and several stated defaults differ
-      from the code (inflow width and velocity).
-    - The parser accepts `pthreads`, which `createSolver` rejects, and
-      rejects `hip`, which `createSolver` supports.
-16. **Documentation.** The README title says "Poisson MPI Benchmark", and
-    the example header says the domain is open in X, but the driver closes
-    all four walls.
-
-### Bugs in the existing tests
-
-17. `tests/tstMesh.cpp` `LocalGridSetup` uses `dimNumBlock( 1 )` for
-    dimension 0 and assumes the cell count divides evenly among ranks.
-18. `tests/tstProblemManager.cpp` `HaloTest` encodes each rank's *local*
-    indices in the values and compares them against the receiver's local
-    indices. The local indices of a shared cell differ between ranks, so
-    the test passes only on one rank, where there are no neighbors.
-19. All four tests in `tests/tstBoundaryConditions.cpp` are empty, and
-    CTest runs every test on a single rank.
+- The pressure correction applied the J-face wall condition to `u`
+  instead of `v` and converted face indices with the cell L2G map
+  (`tstVelocityCorrector`).
+- The RK3 back-trace computed its third stage from `v0`, so it was only
+  second order; the 3D path also wrote the wrong stage (`tstTimeIntegrator`).
+- Ghosts outside the physical domain were never filled. `BoundaryCondition::
+  fillGhosts` now reflects each field across the walls after every gather
+  (`tstBoundaryConditions`).
+- The time step was fixed once from the inflow velocity, so back-traces
+  could leave the halo. `TimeIntegrator::cflTimeStep` now limits each step
+  to one cell of travel at the fastest face velocity, and the command-line
+  time step is a maximum (`tstTimeIntegrator`).
+- With all-solid walls the pressure system is singular. The corrector now
+  removes the mean of the right-hand side (`tstVelocityCorrector`).
+- The mesh divisibility check used an absolute tolerance (`tstMesh`).
+- The initializer received local indices; it now receives global ones
+  (`tstProblemManager`).
+- The halo test encoded local indices, the mesh test assumed even
+  decompositions, and the boundary condition tests were empty; every test
+  now runs at 1, 2, and 4 ranks.
+- Untested fixes: unbalanced profiling regions, the HIP backend typo, the
+  missing `bc` argument in the 3D advection call, the overwritten initial
+  output and leaked `strdup` names, stale ghosts in the velocity output,
+  command-line parsing and help text in `examples/advection.cpp`, and the
+  README and example descriptions.
 
 ## 2. Unit Test Plan
 
 ### Infrastructure
 
-- Register each test at 1, 2, and 4 ranks, so halo and decomposition
-  code runs under real communication. The build uses plain CMake and
-  CTest, so extend the loop in `tests/CMakeLists.txt` with an inner loop
-  over rank counts that calls
-  `add_test( NAME ${_test}Tests_${n} COMMAND ${MPIEXEC_EXECUTABLE}
-  ${MPIEXEC_NUMPROC_FLAG} ${n} ${MPIEXEC_PREFLAGS} $<TARGET_FILE:tst${_test}>
-  ${MPIEXEC_POSTFLAGS} )` and sets the test's `PROCESSORS` property to
-  `n`. `configs/github/host-config.cmake` already sets `MPIEXEC_PREFLAGS`
-  so OpenMPI runs as root and oversubscribes in the CI container, and the
-  GitHub workflow runs every registered test through `ctest`.
+`tests/CMakeLists.txt` registers each test executable at 1, 2, and 4
+ranks through `MPIEXEC_EXECUTABLE`, and the GitHub workflow runs them all
+with `ctest`. New test executables only need adding to its loop.
+
 - Add a small helper header for tests: copy a `Cabana::Grid` array to the
   host, compute a global max, sum, or L2 norm over owned entities with
   `MPI_Allreduce`, and fill an array from a function of global position.
@@ -131,64 +63,47 @@ fix the code.
 
 ### Tests by component
 
-**Mesh**
-- Cell size, global index bounds, and owned extents for rank counts that
-  give uneven decompositions.
-- A large domain (for example `[0, 1e6]`) constructs without throwing;
-  a non-divisible domain throws (bug 10).
+The existing tests cover mesh decomposition and divisibility, halo
+exchange, initializer indices, wall velocities, the pressure matrix, wall
+ghost filling, RK3 order, the CFL time step, and the pressure correction's
+wall velocities, divergence, and singular solve. The tests below remain.
 
 **ProblemManager**
 - `advance` swaps current and next for every field, not only the cell
   field.
-- Halo exchange: write `f(global i, global j)` into owned entities,
-  gather, and check every ghost entity that has a neighbor (bug 18).
 - The init functor receives the cell-center and face-center coordinates
-  that `local_mesh.coordinates` reports (bug 13).
-
-**BoundaryCondition**
-- Velocity: with `SOLID` walls, every wall-normal face velocity is zero
-  after the functor runs; with `FREE` walls, values are unchanged. Run
-  separate cases for I-faces and J-faces (bug 1).
-- Matrix: check the diagonal and off-diagonal entries for interior, edge,
-  and corner cells under each wall type. A solid edge cell has diagonal
-  `3 * scale`, a solid corner `2 * scale`, and a free edge keeps
-  `4 * scale` with the outside neighbor removed.
+  that `local_mesh.coordinates` reports.
 
 **Interpolation**
 - Linear interpolation reproduces any linear field exactly.
 - The chosen higher-order interpolant reproduces grid values at grid
-  points; a failing version of this test documents bug 3.
+  points; a failing version of this test documents the B-spline bug in
+  Section 1.
 - Face-centered interpolation lands on the right staggered locations.
 
 **TimeIntegrator**
 - `rk3` with constant velocity returns `x0 - dt * u` exactly.
-- `rk3` in the solid-body rotation `u = (-y, x)`: the trace error falls by
-  about 8x when `dt` halves (bug 2).
 - `advect` with zero velocity leaves the field unchanged to round-off
-  (bug 3).
-- `advect` near a wall, and with a velocity that would trace outside the
-  halo, stays in bounds and produces finite values (bugs 4 and 5). Run
-  this under a Kokkos debug build with bounds checking.
+  (fails until the B-spline bug is fixed).
+- `advect` near a wall, at the largest time step `cflTimeStep` allows,
+  stays in bounds and produces finite values. Run this under a Kokkos
+  debug build with bounds checking.
 
 **VelocityCorrector**
-- After `correctVelocity`, the discrete divergence of every owned cell is
-  below the solver tolerance, and every solid-wall normal velocity is zero.
 - Projection is idempotent: a second call changes nothing beyond the
   solver tolerance.
 - Given `u = u_df + grad(phi)` for a known divergence-free `u_df`,
   projection recovers `u_df` to second order in `h`.
-- With all-solid walls and a right-hand side that has a small nonzero mean,
-  the solve still converges (bug 6).
 
 **Solver (integration tests)**
 - Closed box, no inflow, no body force: total quantity is conserved to the
   scheme's tolerance, and the quantity stays within its initial min and
   max.
 - One-rank and four-rank runs of the same short problem agree to round-off.
-- The time step adapts so the CFL number never exceeds the configured
-  limit.
+- Output: a run writes files for step 0 and every `write_freq` steps
+  after it, and cell-centered velocities agree across rank counts.
 - Command-line parsing: move `parseInput` into a testable function and
-  check the cases in bug 15.
+  check each option, including the validation fixed earlier.
 
 ### Convergence tests
 
@@ -219,8 +134,9 @@ scheme:
   Runge-Kutta method of Shu and Osher (SSP-RK3). Each stage is a forward
   Euler step, and the stages combine convexly, so the limiter's
   no-new-extrema property survives the full step.
-- **Time step:** choose `dt = C * h / max|u|` with `C <= 0.8`, computing
-  `max|u|` each step with a global reduction.
+- **Time step:** choose `dt = C * h / max|u|` with `C <= 0.8`. Add the
+  factor `C` to `TimeIntegrator::cflTimeStep`, which already computes
+  `max|u|` each step with a global reduction and uses `C = 1`.
 
 ### Why this scheme
 
@@ -274,32 +190,23 @@ q_new = 1/3 q + 2/3 ( q2 + dt * L(q2) )
 
 ### Implementation steps
 
-1. **Fix the bugs in Section 1** and land the unit tests, so the new scheme
+1. **Land the remaining unit tests** from Section 2, so the new scheme
    starts from a tested base.
-2. **Fill physical ghost cells.** Add a `BoundaryCondition::fillGhosts`
-   step after each halo gather: reflect normal velocity at solid walls,
-   copy tangential velocity (free slip) or negate it (no slip), and apply
-   zero-gradient extrapolation for the scalar at solid and free walls.
-   Test it independently.
-3. **Add an adaptive time step.** Compute `max|u|` with a Kokkos reduction
-   and `MPI_Allreduce` each step. Remove the one-time estimate in
-   `Solver`.
-4. **Add flux-form advection** in a new `src/Advection.hpp`: a limiter
+2. **Add flux-form advection** in a new `src/Advection.hpp`: a limiter
    function, a face-flux kernel for each direction, and a flux-divergence
    kernel. Document each function with the equation it implements and a
    textbook reference.
-5. **Replace `TimeIntegrator::step`** with SSP-RK3. Store one extra stage
-   array per field in `ProblemManager`, and gather and fill ghosts before
-   each stage.
-6. **Handle the pressure null space.** Subtract the mean of the right-hand
-   side before the solve when every wall is solid, or pin one pressure
-   value.
-7. **Reduce the halo to two cells** once nothing needs three, and update
+3. **Replace `TimeIntegrator::step`** with SSP-RK3. Store one extra stage
+   array per field in `ProblemManager`, and gather and call
+   `BoundaryCondition::fillGhosts` before each stage. `fillGhosts` gives
+   free-slip walls; add a no-slip option that negates tangential velocity
+   if viscosity is added.
+4. **Reduce the halo to two cells** once nothing needs three, and update
    the comment in `ProblemManager.hpp` that explains the halo depth.
-8. **Keep the old scheme for comparison** only if benchmark users need it.
+5. **Keep the old scheme for comparison** only if benchmark users need it.
    Otherwise remove it, along with the spline interpolation of advected
    quantities. Keep linear interpolation for output.
-9. **Write `docs/numerics.md`:** the governing equations, the MAC grid
+6. **Write `docs/numerics.md`:** the governing equations, the MAC grid
    layout with index conventions, the scheme above, boundary handling, and
    the CFL condition, with each section pointing to the code that
    implements it.

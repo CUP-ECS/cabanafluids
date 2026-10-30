@@ -48,8 +48,9 @@ TYPED_TEST( MeshTest, LocalGridSetup )
         Cabana::Grid::Own(), Cabana::Grid::Cell(), Cabana::Grid::Local() );
     for ( int i = 0; i < 2; i++ )
     {
-        EXPECT_EQ( own_local_cell_space.extent( i ),
-                   this->boxCells_ / global_grid.dimNumBlock( i ) );
+        int share = this->boxCells_ / global_grid.dimNumBlock( i );
+        EXPECT_GE( own_local_cell_space.extent( i ), share );
+        EXPECT_LE( own_local_cell_space.extent( i ), share + 1 );
     }
 
     /*
@@ -62,9 +63,24 @@ TYPED_TEST( MeshTest, LocalGridSetup )
         Cabana::Grid::Ghost(), Cabana::Grid::Face<Cabana::Grid::Dim::I>(),
         Cabana::Grid::Local() );
     EXPECT_EQ( ghost_local_face_space.extent( 0 ),
-               this->boxCells_ / global_grid.dimNumBlock( 1 ) +
-                   2 * this->haloWidth_ + 1 );
+               own_local_cell_space.extent( 0 ) + 2 * this->haloWidth_ + 1 );
     EXPECT_EQ( ghost_local_face_space.extent( 1 ),
-               this->boxCells_ / global_grid.dimNumBlock( 1 ) +
-                   2 * this->haloWidth_ );
+               own_local_cell_space.extent( 1 ) + 2 * this->haloWidth_ );
+}
+
+TYPED_TEST( MeshTest, DivisibilityCheck )
+{
+    using mesh_type = CabanaFluids::Mesh<2, typename TypeParam::ExecutionSpace,
+                                         typename TypeParam::MemorySpace>;
+
+    // 88 cells of 100 / 88 miss the extent by 1.4e-14: more than ten
+    // epsilons, but well within the relative round-off of the extent
+    Kokkos::Array<double, 4> large_box = { 0, 0, 100.0, 100.0 };
+    EXPECT_NO_THROW( mesh_type( large_box, { 88, 88 }, this->partitioner_,
+                                this->haloWidth_, MPI_COMM_WORLD ) );
+
+    Kokkos::Array<double, 4> uneven_box = { 0, 0, 1.0, 1.5 };
+    EXPECT_THROW( mesh_type( uneven_box, { 32, 32 }, this->partitioner_,
+                             this->haloWidth_, MPI_COMM_WORLD ),
+                  std::logic_error );
 }

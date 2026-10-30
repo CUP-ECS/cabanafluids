@@ -59,8 +59,8 @@ class SiloWriter
      * @param dt Time Step (dt)
      * @brief Writes the locally-owned portion of the mesh/variables to a file
      **/
-    void writeFile( DBfile* dbfile, char* meshname, int time_step, double time,
-                    double dt )
+    void writeFile( DBfile* dbfile, const char* meshname, int time_step,
+                    double time, double dt )
     {
         // Initialize Variables
         int dims[Dims], zdims[Dims];
@@ -355,7 +355,7 @@ class SiloWriter
      * @param time Current time
      * @param dt Time step (dt)
      **/
-    void siloWrite( char* name, int time_step, double time, double dt )
+    void siloWrite( const char* name, int time_step, double time, double dt )
     {
         // Initalize Variables
         DBfile* silo_file;
@@ -391,6 +391,11 @@ class SiloWriter
         // Show Errors and Force FLoating Point
         DBShowErrors( DB_ALL, NULL );
         Kokkos::Profiling::popRegion();
+
+        // Interpolating velocity to cell centers reads ghost faces on rank
+        // boundaries, which the pressure correction has made stale. Gather
+        // before waiting for the baton, since only one rank at a time holds it.
+        _pm->gather( Version::Current() );
 
         Kokkos::Profiling::pushRegion( "SiloWriter::siloWrite::batonWait" );
         silo_file = (DBfile*)PMPIO_WaitForBaton( baton, filename, nsname );
