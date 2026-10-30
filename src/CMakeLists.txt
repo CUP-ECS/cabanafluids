@@ -1,35 +1,10 @@
-set(HEADERS
-  BodyForce.hpp
-  BoundaryConditions.hpp
-  InflowSource.hpp
-  Interpolation.hpp
-  Mesh.hpp
-  ProblemManager.hpp
-  SiloWriter.hpp
-  Solver.hpp
-  TimeIntegrator.hpp
-  VelocityCorrector.hpp
-  )
-
-set(SOURCES
-  Mesh.cpp
-  )
-
 set(DEPENDS_ON
   Cabana::Core
   Cabana::Grid
-  SILO::silo 
+  SILO::silo
   MPI::MPI_CXX
   )
- 
-set(INCLUDES
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_BINARY_DIR}
-  )
-       
-blt_add_library( NAME cabanafluids
-                 HEADERS ${HEADERS}
-                 SOURCES ${SOURCES}
-                 INCLUDES ${INCLUDES}
-                 DEPENDS_ON ${DEPENDS_ON} 
-  )
+
+add_library( cabanafluids Mesh.cpp )
+target_include_directories( cabanafluids PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} )
+target_link_libraries( cabanafluids PUBLIC ${DEPENDS_ON} )

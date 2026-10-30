@@ -5,13 +5,14 @@
 # be installing that into the container in which the tests will run.
 spack:
   specs:
-  - git       # Need a newer version of git to be able to get submodules
+  - git
   - cmake     # Make sure we get a new enough version of cmake
   - hdf5+mpi  # Silo should have an mpi-aware version of hdf5
   - silo@4.11 # Specify a non-bsd versions since some of those don't build
   - hypre-cmake +mpi # Make sure we get an mpi version of hypre
   - kokkos std=17 
   - cabana +hypre +mpi %gcc
+  - googletest # Unit test framework
   concretization: together
   view: true
 
