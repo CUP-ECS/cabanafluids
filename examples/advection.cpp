@@ -120,6 +120,10 @@ void help( const int rank, char* progname )
                   << "Write Frequency (default 20)" << std::left << "\n";
         std::cout << std::left << std::setw( 10 ) << "-d" << std::setw( 40 )
                   << "Fluid Density (default 0.1)" << std::left << "\n";
+        std::cout << std::left << std::setw( 10 ) << "-m" << std::setw( 40 )
+                  << "Matrix Solver (default Reference)" << std::left << "\n";
+        std::cout << std::left << std::setw( 10 ) << "-c" << std::setw( 40 )
+                  << "Preconditioner (default Jacobi)" << std::left << "\n";
 
         // Inflow Source Arguments
         std::cout << std::left << std::setw( 10 ) << "-x" << std::setw( 40 )
