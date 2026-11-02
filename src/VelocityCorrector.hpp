@@ -108,7 +108,7 @@ class VelocityCorrector<2, ExecutionSpace, MemorySpace, SparseSolver>
 	int ncells = 1;
         auto gmesh = _mesh->localGrid()->globalGrid().globalMesh();
 	for (int i = 0; i < 2; i++) {
-	    ncells = gmesh.globalNumCell(i);
+	    ncells *= gmesh.globalNumCell(i);
 	}
 	int itermax = 10 * sqrt((double)ncells);
 
