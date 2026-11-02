@@ -32,7 +32,8 @@ Sources:
 
 CabanaFluids requires CMake 3.18 or later, a C++17 compiler, MPI, Cabana
 built with MPI and grid support, and Silo. HYPRE is optional. The unit
-tests need GoogleTest; configure with `-DBUILD_TESTING=OFF` to skip them.
+tests need GoogleTest; configure with `-DCabanaFluids_ENABLE_TESTING=OFF`
+to skip them.
 The `configs` directory holds Spack environments for several systems.
 
 ```
@@ -41,7 +42,8 @@ cmake --build build
 ctest --test-dir build
 ```
 
-CTest runs each test executable at 1, 2, and 4 MPI ranks. Set
+CTest runs each test suite at 1, 2, and 4 MPI ranks on every enabled Kokkos
+backend. Set
 `MPIEXEC_PREFLAGS` if your MPI needs extra arguments, as
 `configs/github/host-config.cmake` does for OpenMPI in CI.
 

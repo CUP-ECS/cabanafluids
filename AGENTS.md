@@ -57,9 +57,9 @@ lives at `CUP-ECS/CabanaFluids`, and no other repository owns its specification.
 | `.gitignore` | Build, editor, and Spack artifacts kept out of the repository. Inherited from the template, with `build-*` added for Spack build symlinks |
 | `spack-envs/llnl/` | Placeholder Spack environments for Dane, Tioga, and Tuolumne. Inherited from the template but changeable |
 | `FUTURE.md` | Known bugs, fixed bugs with their tests, the unit and convergence test plan, and the planned MUSCL and SSP-RK3 advection scheme |
-| `CMakeLists.txt`, `cmake/` | The CMake build and the find modules for Silo and `clang-format` |
+| `CMakeLists.txt`, `cmake/` | The CMake build, the find modules for Silo and `clang-format`, and Cabana's test harness in `cmake/test_harness/` |
 | `src/` | The header-mostly `cabanafluids` library: mesh, problem manager, boundary conditions, time integration, pressure projection, and Silo output |
-| `tests/` | GoogleTest unit tests, each registered with CTest at 1, 2, and 4 MPI ranks |
+| `tests/` | GoogleTest unit tests, one `tst<Name>.hpp` per suite, each built per Kokkos backend and registered with CTest at 1, 2, and 4 MPI ranks |
 | `examples/` | The `advection` driver and its command-line options |
 | `configs/` | Spack environments and the CMake host config for CI, Lassen, generic CUDA systems, and macOS |
 

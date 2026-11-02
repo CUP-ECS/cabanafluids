@@ -65,9 +65,13 @@ where one could be written:
 
 ### Infrastructure
 
-`tests/CMakeLists.txt` registers each test executable at 1, 2, and 4
-ranks through `MPIEXEC_EXECUTABLE`, and the GitHub workflow runs them all
-with `ctest`. New test executables only need adding to its loop.
+`tests/CMakeLists.txt` hands each suite to Cabana's test harness in
+`cmake/test_harness/`, which builds one executable per enabled Kokkos
+backend and registers it at 1, 2, and 4 ranks through
+`MPIEXEC_EXECUTABLE`; the GitHub workflow runs them all with `ctest`. A
+new suite is a `tst<Name>.hpp` typed on `MeshDeviceTypes` from
+`tstDriver.hpp`, added to `MPI_TESTS`; shared fixtures live in
+`*Fixture.hpp`.
 
 - Add a small helper header for tests: copy a `Cabana::Grid` array to the
   host, compute a global max, sum, or L2 norm over owned entities with

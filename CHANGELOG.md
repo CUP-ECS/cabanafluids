@@ -2,6 +2,19 @@
 
 Newest first.
 
+**2026-11-01 — rebased onto `develop` and its test harness.** `develop`
+replaced BLT with plain CMake and Cabana's test harness, as this branch had
+done separately; the rebase keeps `develop`'s build. The harness registered no
+tests, because Cabana does not export the device list it loops over, and
+CTest passed with nothing to run. `CMakeLists.txt` now defines that list, each
+suite moved from `tst<Name>.cpp` to the `tst<Name>.hpp` the harness compiles
+once per Kokkos backend, and the shared fixtures moved to `*Fixture.hpp`.
+Every suite runs at 1, 2, and 4 ranks regardless of core count, so the
+4-rank runs that exposed earlier decomposition bugs never drop out. The
+pressure solve's iteration cap from `develop` counted cells in one dimension
+only, which stopped CG before it converged on the test mesh; it now counts
+all cells.
+
 **2026-11-01 — inflow as an overlap-weighted rate.** `InflowSource` tested
 only cell and face centers against its box, so a small box could miss the mesh
 entirely, and it forced a minimum quantity rather than adding a rate. Each cell
