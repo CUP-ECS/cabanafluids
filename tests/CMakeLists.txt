@@ -1,4 +1,4 @@
-foreach( _test Mesh ProblemManager BoundaryConditions TimeIntegrator VelocityCorrector )
+foreach( _test Mesh ProblemManager BoundaryConditions TimeIntegrator VelocityCorrector InflowSource )
   add_executable( tst${_test} tst${_test}.cpp )
   target_link_libraries( tst${_test} PRIVATE cabanafluids GTest::gtest )
   foreach( _np 1 2 4 )
@@ -9,8 +9,3 @@ foreach( _test Mesh ProblemManager BoundaryConditions TimeIntegrator VelocityCor
     set_tests_properties( ${_test}Tests_${_np} PROPERTIES PROCESSORS ${_np} )
   endforeach()
 endforeach()
-
-# tstInflowSource does not exist yet
-#add_executable( tstInflowSource tstInflowSource.cpp )
-#target_link_libraries( tstInflowSource PRIVATE cabanafluids GTest::gtest )
-#add_test( NAME InflowSourceTests COMMAND tstInflowSource )

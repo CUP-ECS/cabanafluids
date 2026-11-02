@@ -15,6 +15,14 @@ Even with zero velocity, each step blurs the field with weights
 Fixing it means changing the interpolation in the advection scheme, so
 the scheme replacement in Section 3 resolves it.
 
+**Gravity has no effect.** `BodyForce` adds `-g * dt` to every J-face
+velocity, but in a closed box of constant density a uniform force is the
+gradient of a hydrostatic pressure, and the projection removes it to
+solver tolerance (`tstVelocityCorrector`). The `-g` option of the
+`advection` example therefore changes nothing. Gravity moves the fluid
+only once the force depends on the advected quantity, for example through
+a Boussinesq buoyancy term on the J-faces.
+
 ### Fixed bugs
 
 The following bugs from the original review are fixed, each with a test
@@ -35,6 +43,13 @@ where one could be written:
 - With all-solid walls the pressure system is singular. The corrector now
   removes the mean of the right-hand side (`tstVelocityCorrector`).
 - The mesh divisibility check used an absolute tolerance (`tstMesh`).
+- The inflow source tested only entity centers against its box, so a box
+  smaller than a cell could miss every cell, and it forced a minimum
+  quantity and velocity instead of adding a rate. It now weights each
+  cell and face by the fraction of its control volume the box covers,
+  adds `rate * dt` scaled by that fraction to the quantity, and blends
+  face velocities toward the inflow velocity by the same fraction
+  (`tstInflowSource`).
 - The initializer received local indices; it now receives global ones
   (`tstProblemManager`).
 - The halo test encoded local indices, the mesh test assumed even
@@ -65,8 +80,10 @@ with `ctest`. New test executables only need adding to its loop.
 
 The existing tests cover mesh decomposition and divisibility, halo
 exchange, initializer indices, wall velocities, the pressure matrix, wall
-ghost filling, RK3 order, the CFL time step, and the pressure correction's
-wall velocities, divergence, and singular solve. The tests below remain.
+ghost filling, RK3 order, the CFL time step, the pressure correction's
+wall velocities, divergence, singular solve, and removal of uniform
+gravity, and the inflow source's overlap weighting. The tests below
+remain.
 
 **ProblemManager**
 - `advance` swaps current and next for every field, not only the cell
