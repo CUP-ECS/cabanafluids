@@ -7,7 +7,7 @@ include(GNUInstallDirs)
 
 # Be explicit about the C++ version we want.
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIIRED ON)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # find dependencies
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
@@ -51,7 +51,7 @@ endif()
 # enable doxygen
 find_package(Doxygen)
 if(Doxygen_FOUND)
-  doxygen_add_docs(doxygen core/src grid/src)
+  doxygen_add_docs(doxygen src)
 endif()
 
 
