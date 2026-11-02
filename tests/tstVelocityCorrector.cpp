@@ -1,3 +1,4 @@
+#include <BodyForce.hpp>
 #include <Cabana_Core.hpp>
 #include <Cabana_Grid.hpp>
 #include <Kokkos_Core.hpp>
@@ -150,4 +151,33 @@ TYPED_TEST( VelocityCorrectorTest, SingularSystemConverges )
     // corrector removes the mean
     this->setU( Expansion{ this->boxCells_ } );
     EXPECT_NO_THROW( this->correct() );
+}
+
+TYPED_TEST( VelocityCorrectorTest, UniformGravityProjectsAway )
+{
+    // Uniform gravity on a constant-density fluid in a closed box is the
+    // gradient of a hydrostatic pressure, so the projection removes it and
+    // gravity alone never moves the fluid
+    using ExecutionSpace = typename TypeParam::ExecutionSpace;
+    auto local_grid = this->mesh_->localGrid();
+    auto space = local_grid->indexSpace( Cabana::Grid::Own(), FaceJ(),
+                                         Cabana::Grid::Local() );
+    auto l2g = Cabana::Grid::IndexConversion::createL2G( *local_grid, FaceJ() );
+    auto v = this->pm_->get( FaceJ(), Velocity(), Current() );
+    CabanaFluids::BodyForce<2> gravity( 0.0, -9.8 );
+    auto bc = this->bc_;
+    Kokkos::parallel_for(
+        "apply gravity", createExecutionPolicy( space, ExecutionSpace() ),
+        KOKKOS_LAMBDA( const int i, const int j ) {
+            int gi, gj;
+            l2g( i, j, gi, gj );
+            gravity( FaceJ(), v, i, j, 0.0, 0.0, 0.01, 0.0 );
+            bc( FaceJ(), v, gi, gj, i, j );
+        } );
+    this->correct();
+
+    auto v_host = Kokkos::create_mirror_view_and_copy( Kokkos::HostSpace(), v );
+    for ( int i = space.min( 0 ); i < space.max( 0 ); i++ )
+        for ( int j = space.min( 1 ); j < space.max( 1 ); j++ )
+            ASSERT_LT( std::abs( v_host( i, j, 0 ) ), 1.0e-4 * 9.8 * 0.01 );
 }

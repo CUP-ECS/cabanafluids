@@ -139,7 +139,7 @@ void help( const int rank, char* progname )
         std::cout << std::left << std::setw( 10 ) << "-v" << std::setw( 40 )
                   << "Inflow Y Velocity (default 0)" << std::left << "\n";
         std::cout << std::left << std::setw( 10 ) << "-q" << std::setw( 40 )
-                  << "Inflow Quantity (default 3.0)" << std::left << "\n";
+                  << "Inflow Rate (default 3.0)" << std::left << "\n";
 
         // Body Force Arguments
         std::cout << std::left << std::setw( 10 ) << "-g" << std::setw( 40 )
