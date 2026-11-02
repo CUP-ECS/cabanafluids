@@ -56,6 +56,7 @@ lives at `CUP-ECS/CabanaFluids`, and no other repository owns its specification.
 | `.clang-format` | The C and C++ style CI enforces. This repository keeps its own LLVM-based Allman style rather than the template's |
 | `.gitignore` | Build, editor, and Spack artifacts kept out of the repository. Inherited from the template, with `build-*` added for Spack build symlinks |
 | `spack-envs/llnl/` | Placeholder Spack environments for Dane, Tioga, and Tuolumne. Inherited from the template but changeable |
+| `MEMORY.md` | Agent session continuity: current state, decisions the code records only as outcomes, easy-to-miss procedures, and open questions |
 | `FUTURE.md` | Known bugs, fixed bugs with their tests, the unit and convergence test plan, and the planned MUSCL and SSP-RK3 advection scheme |
 | `CMakeLists.txt`, `cmake/` | The CMake build, the find modules for Silo and `clang-format`, and Cabana's test harness in `cmake/test_harness/` |
 | `src/` | The header-mostly `cabanafluids` library: mesh, problem manager, boundary conditions, time integration, pressure projection, and Silo output |

@@ -1,0 +1,69 @@
+# Session memory
+
+Reasoning worth carrying between agent sessions that belongs in no other
+file. Written 2026-11-01. Verify before acting on it; the files it points
+at win where the two disagree.
+
+## Current state
+
+- `cabanafluids-cleanup` is rebased onto `develop` as
+  `cabanafluids-cleanup-on-develop`, open as PR #60 against `develop` and
+  awaiting review. `CHANGELOG.md` records what changed and why.
+- CI runs in `ghcr.io/cup-ecs/cabanafluids-tester:latest`, rebuilt from
+  `configs/github/spack.yaml` by PRs #61 and #62 after the old
+  `cajitafluids-tester` image broke `actions/checkout`. Pull requests
+  only build the image; a push to `develop` publishes it, which takes
+  about an hour. Changing the workflow or the image needs a human.
+- The image builds the CUP-ECS Cabana fork's `master` with `+hypre`
+  from the `cupecs` repo in COMPASS-PSAAP/spack-packages, because
+  upstream Cabana's CMake rejects hypre 3. Local builds use the same
+  fork without hypre, so only CI exercises the hypre solver path.
+- The tests have run only on macOS with Kokkos' Serial backend. OpenMP,
+  CUDA, and HIP builds of the harness are untested.
+- Once PR #60 merges, `origin/cabanafluids-cleanup` and the local backup
+  `cabanafluids-cleanup-pre-rebase` can go; ask before deleting them.
+
+## Design decisions
+
+- The rebase kept `develop`'s CMake build and Cabana test harness over
+  this branch's own BLT replacement, because `develop` owns the testing
+  infrastructure.
+- Tests keep their typed GoogleTest fixtures, with `MeshDeviceTypes` in
+  `tests/tstDriver.hpp` reduced to the one device the harness compiles
+  for. Converting to Cabana's `TEST( TEST_CATEGORY, ... )` style would
+  rewrite every test for no behavioral gain.
+- The vendored `cmake/test_harness/test_harness.cmake` is edited to run
+  exactly 1, 2, and 4 ranks. Do not restore Cabana's
+  `MPIEXEC_MAX_NUMPROCS` logic; it drops 4-rank runs on small machines
+  and adds runs at odd rank counts the tests do not expect.
+
+## Procedures easy to get wrong
+
+- `rerere` is enabled in this clone. A trial rebase resolved by "take one
+  side" records those resolutions and replays them silently later; clear
+  the `.git/rr-cache` entries a trial created.
+- Local build: configure against the Spack view in
+  `../.spack-env/view`, with `mpicxx` as the compiler and
+  `CMAKE_PREFIX_PATH` copied from the Spack build's `CMakeCache.txt`
+  under `build-darwin-*/`. Sourcing that build's `spack-build-env.txt`
+  aborts the shell, and the file holds an API key; never commit or quote
+  it.
+- A new test suite is `tests/tst<Name>.hpp` plus an entry in `MPI_TESTS`
+  in `tests/CMakeLists.txt`; shared fixtures live in `*Fixture.hpp`,
+  because the harness claims every `tst<Name>.hpp` name.
+- `ctest -N` reporting zero tests means the harness found no devices.
+  `CABANA_SUPPORTED_DEVICES` is defined in the root `CMakeLists.txt`
+  because Cabana does not export it.
+- Local `clang-format` is version 23; CI uses 14.
+- Check a `spack.yaml` change with fresh repo clones, user config off
+  (`SPACK_USER_CONFIG_PATH`, `SPACK_DISABLE_LOCAL_CONFIG=1`), and
+  `spack concretize --fresh`. Spack checks out a pinned repo `commit`
+  only on a fresh clone, and local installs mask the versions CI gets.
+  A clean concretize still does not prove the container builds.
+
+## Open questions
+
+- `VelocityCorrector` caps CG at `10 * sqrt(ncells)` iterations, from
+  `develop`. It suffices for the 64x64 test mesh; nobody has checked it
+  at production sizes or with HYPRE solvers.
+- `FUTURE.md` holds the remaining test plan and the advection rewrite.
