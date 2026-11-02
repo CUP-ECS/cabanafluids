@@ -11,8 +11,8 @@
 
 #include <BoundaryConditions.hpp>
 
-#include "tstDriver.hpp"
 #include "ProblemManagerFixture.hpp"
+#include "tstDriver.hpp"
 
 template <class T>
 class BoundaryConditionsTest : public ProblemManagerTest<T>

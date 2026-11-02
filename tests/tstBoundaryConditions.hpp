@@ -9,9 +9,9 @@
 #include <BoundaryConditions.hpp>
 
 #include "BoundaryConditionsFixture.hpp"
-#include "tstDriver.hpp"
 #include "MeshFixture.hpp"
 #include "ProblemManagerFixture.hpp"
+#include "tstDriver.hpp"
 
 TYPED_TEST_SUITE( BoundaryConditionsTest, MeshDeviceTypes );
 

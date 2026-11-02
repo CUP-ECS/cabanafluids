@@ -105,8 +105,8 @@ void help( const int rank, char* progname )
     {
         std::cout << "Usage: " << progname << "\n";
         std::cout << std::left << std::setw( 10 ) << "-p" << std::setw( 40 )
-                  << "On-node Parallelism Model (default \"default\")" << std::left
-                  << "\n";
+                  << "On-node Parallelism Model (default \"default\")"
+                  << std::left << "\n";
         std::cout << std::left << std::setw( 10 ) << "-s" << std::setw( 40 )
                   << "Size of domain (default 1.0)" << std::left << "\n";
         std::cout << std::left << std::setw( 10 ) << "-n" << std::setw( 40 )
@@ -269,7 +269,7 @@ int parseInput( const int rank, const int argc, char** argv, ClArgs& cl )
         case 'p':
             cl.device = strdup( optarg );
             if ( ( cl.device.compare( "default" ) != 0 ) &&
-		 ( cl.device.compare( "serial" ) != 0 ) &&
+                 ( cl.device.compare( "serial" ) != 0 ) &&
                  ( cl.device.compare( "cuda" ) != 0 ) &&
                  ( cl.device.compare( "hip" ) != 0 ) &&
                  ( cl.device.compare( "openmp" ) != 0 ) )

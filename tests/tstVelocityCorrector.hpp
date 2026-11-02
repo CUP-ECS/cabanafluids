@@ -6,8 +6,8 @@
 
 #include <mpi.h>
 
-#include "tstDriver.hpp"
 #include "ProblemManagerFixture.hpp"
+#include "tstDriver.hpp"
 
 using Cell = Cabana::Grid::Cell;
 using FaceI = Cabana::Grid::Face<Cabana::Grid::Dim::I>;

@@ -5,9 +5,9 @@
 
 #include <mpi.h>
 
-#include "tstDriver.hpp"
 #include "MeshFixture.hpp"
 #include "ProblemManagerFixture.hpp"
+#include "tstDriver.hpp"
 
 TYPED_TEST_SUITE( ProblemManagerTest, MeshDeviceTypes );
 
