@@ -8,7 +8,7 @@
 
 #include <mpi.h>
 
-#include "tstMesh.hpp"
+#include "MeshFixture.hpp"
 
 template <std::size_t Dim>
 class NullInitFunctor

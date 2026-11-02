@@ -8,10 +8,10 @@
 
 #include <BoundaryConditions.hpp>
 
-#include "tstBoundaryConditions.hpp"
+#include "BoundaryConditionsFixture.hpp"
 #include "tstDriver.hpp"
-#include "tstMesh.hpp"
-#include "tstProblemManager.hpp"
+#include "MeshFixture.hpp"
+#include "ProblemManagerFixture.hpp"
 
 TYPED_TEST_SUITE( BoundaryConditionsTest, MeshDeviceTypes );
 

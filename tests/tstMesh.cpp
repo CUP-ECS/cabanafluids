@@ -9,7 +9,7 @@
 #include <mpi.h>
 
 #include "tstDriver.hpp"
-#include "tstMesh.hpp"
+#include "MeshFixture.hpp"
 
 TYPED_TEST_SUITE( MeshTest, MeshDeviceTypes );
 

@@ -12,7 +12,7 @@
 #include <BoundaryConditions.hpp>
 
 #include "tstDriver.hpp"
-#include "tstProblemManager.hpp"
+#include "ProblemManagerFixture.hpp"
 
 template <class T>
 class BoundaryConditionsTest : public ProblemManagerTest<T>
