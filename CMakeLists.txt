@@ -41,6 +41,8 @@ if(CabanaFluids_ENABLE_TESTING)
   else()
     message(FATAL_ERROR "bug in GTest find module workaround")
   endif()
+  # Cabana does not export its device list, which the test harness needs
+  set(CABANA_SUPPORTED_DEVICES SERIAL THREADS OPENMP CUDA HIP SYCL OPENMPTARGET)
   set(TEST_HARNESS_DIR ${CMAKE_SOURCE_DIR}/cmake/test_harness)
   include(cmake/test_harness/test_harness.cmake)
   enable_testing()

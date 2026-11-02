@@ -12,23 +12,9 @@ struct DeviceType
     using MemorySpace = M;
 };
 
-using MeshDeviceTypes = ::testing::Types<
-#ifdef KOKKOS_ENABLE_OPENMP
-    DeviceType<Kokkos::OpenMP, Kokkos::HostSpace>,
-#endif
-#ifdef KOKKOS_ENABLE_CUDA
-    DeviceType<Kokkos::Cuda, Kokkos::CudaSpace>,
-#endif
-    DeviceType<Kokkos::Serial, Kokkos::HostSpace>>;
+// The test harness builds one executable per Kokkos backend and defines
+// TEST_EXECSPACE and TEST_MEMSPACE for it
+using MeshDeviceTypes =
+    ::testing::Types<DeviceType<TEST_EXECSPACE, TEST_MEMSPACE>>;
 
-int main( int argc, char* argv[] )
-{
-    MPI_Init( &argc, &argv );
-    Kokkos::initialize( argc, argv );
-    ::testing::InitGoogleTest( &argc, argv );
-    int return_val = RUN_ALL_TESTS();
-    Kokkos::finalize();
-    MPI_Finalize();
-    return return_val;
-}
 #endif //_TSTDRIVER_HPP_
