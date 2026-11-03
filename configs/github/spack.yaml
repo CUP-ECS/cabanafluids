@@ -18,11 +18,13 @@ spack:
   view: true
 
   # Spack 1.2.2's default package repo (releases/v2026.10 and older) lacks
-  # Cabana 0.8, so pin a develop commit that has it
+  # Cabana 0.8, so pin a develop commit that has it; Spack checks out the
+  # commit only on a fresh clone, so give it a path the image lacks
   repos:
     builtin:
       git: https://github.com/spack/spack-packages.git
       commit: a4b5a7632b0b1ba464376ed27519858c26d15430
+      destination: /opt/spack-packages
 
   container:
     # Select the format of the recipe e.g. docker,
