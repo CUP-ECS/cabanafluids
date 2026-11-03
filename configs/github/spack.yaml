@@ -8,23 +8,21 @@ spack:
   - git
   - cmake     # Make sure we get a new enough version of cmake
   - hdf5+mpi  # Silo should have an mpi-aware version of hdf5
-  - silo@4.11 # Specify a non-bsd versions since some of those don't build
+  - silo@4.12 # Specify a non-bsd versions since some of those don't build
   - hypre +mpi # Make sure we get an mpi version of hypre
   - kokkos@4 +serial cxxstd=17 # Kokkos 5 requires C++20
-  - cabana@0.8.0 +grid +hypre +mpi %gcc # 0.7 rejects the hypre 3 it gets
+  - cupecs.cabana@master +grid +hypre +mpi %gcc # Upstream rejects hypre 3
   - googletest # Unit test framework
   concretizer:
     unify: true
   view: true
 
-  # Spack 1.2.2's default package repo (releases/v2026.10 and older) lacks
-  # Cabana 0.8, so pin a develop commit that has it; Spack checks out the
-  # commit only on a fresh clone, so give it a path the image lacks
+  # Upstream Cabana's CMake asks for hypre 2.22.1 and rejects hypre 3, which
+  # Spack pairs with Cabana 0.8; the CUP-ECS fork and its package accept it
   repos:
-    builtin:
-      git: https://github.com/spack/spack-packages.git
-      commit: a4b5a7632b0b1ba464376ed27519858c26d15430
-      destination: /opt/spack-packages
+    cupecs:
+      git: https://github.com/COMPASS-PSAAP/spack-packages.git
+      paths: [spack_pkgs/spack_repo/cupecs]
 
   container:
     # Select the format of the recipe e.g. docker,
