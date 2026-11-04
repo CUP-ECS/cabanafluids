@@ -10,7 +10,8 @@ These steps come before `develop` merges into `main` and CabanaFluids
 gets its first tagged release. The communication work in issue #54, the
 remaining tests in Section 2, and the scheme in Section 3 follow the
 release. Each step gets its own branch from `develop` and its own pull
-request into `develop`; `prepare-release` carries this plan.
+request into `develop`; `prepare-release` carried this plan. Status as of
+2026-11-04 follows each step.
 
 1. **Reconcile `main` with `develop`.** `main` holds one commit that
    `develop` lacks, `d5a0b83` from 2022: face-array return types for the
@@ -21,32 +22,40 @@ request into `develop`; `prepare-release` carries this plan.
    `develop` and port the fixes to `Cabana::Grid` names, so the release
    merge has no conflicts. `develop` already balances the profiling
    regions. The merge drops the UAO tutorial config, which step 7
-   replaces.
+   replaces. *Done in PR #67.*
 2. **Build with hypre and threads locally.** The parent Spack environment
    (`../spack.yaml`) develops the CUP-ECS Cabana fork, which accepts
    hypre 3, but its lock has `cabana ~hypre~threads` and
    `cabanafluids ~hypre`. Add `+hypre` to both specs, `+threads` to
    Cabana's, and both to the `develop` entries; reconcretize, rebuild,
-   and confirm the build defines `Cabana_ENABLE_HYPRE`.
+   and confirm the build defines `Cabana_ENABLE_HYPRE`. *Done; Kokkos is
+   pinned to 4.7.01, as CI pins `kokkos@4`, and the specs name
+   `cupecs.cabana` explicitly.*
 3. **Test the hypre solvers.** Run the `VelocityCorrector` tests over
    several solver and preconditioner pairs: `Reference` with `Jacobi`
    always, and hypre's `PCG`, `GMRES`, `BiCGSTAB`, `PFMG`, and `SMG`
    under `#ifdef Cabana_ENABLE_HYPRE`. Add a test that a reference solve
    and a hypre solve of the same system agree to solver tolerance. Run
-   every case at 1, 2, and 4 ranks.
+   every case at 1, 2, and 4 ranks. *In PR #70.* The tests exposed a
+   Cabana bug that step 10 fixes. `PCG` and `GMRES` with hypre's
+   `Jacobi` preconditioner stall on the test problem, and `GMRES` with
+   `Diagonal` hits the iteration cap, so the tests leave those pairs
+   out; the example's default preconditioner for hypre solvers changes to
+   one that converges.
 4. **Fix the hypre lifecycle.** `createVelocityCorrector` calls
    `HYPRE_Init` each time it builds a hypre corrector, and nothing calls
    `HYPRE_Finalize`. Initialize hypre once after `MPI_Init` and finalize
    it before `MPI_Finalize`, in `examples/advection.cpp` and in the test
    driver. The example defaults to `Reference`, Cabana's built-in
    conjugate gradient solver, and keeps that default; its comment, which
-   claims hypre's solver, changes to match.
+   claims hypre's solver, changes to match. *In PR #70.*
 5. **Confirm CI runs the hypre path.** The CI image builds Cabana with
    `+hypre`, but a missing hypre would compile the new tests out without
    failing. Check that a CI run's configure log finds hypre and its test
    log runs the hypre cases. If that cannot be made to fail loudly
    without a workflow or host-config change, propose the change; CI
-   configuration needs a human.
+   configuration needs a human. *The log cannot show it, so PR #71 makes
+   CI's configure fail when Cabana lacks hypre.*
 6. **Remove the CajitaFluids name.** Four `#endif` comments still name
    it (`src/Interpolation.hpp`, `src/Mesh.hpp`, `src/TimeIntegrator.hpp`,
    and `src/VelocityCorrector.hpp`), as do the header comments of
@@ -55,28 +64,52 @@ request into `develop`; `prepare-release` carries this plan.
    `main`'s code uses the old `Cajita::` namespace. The old
    `cajitafluids-tester` image on GHCR can go once nothing pulls it;
    deleting it needs a human. `MEMORY.md` and `CHANGELOG.md` mention the
-   old name as history and keep it.
+   old name as history and keep it. *Done in PR #65; the merge in PR #67
+   brought in no `Cajita` names. The GitHub repository description still
+   calls this a "poisson" solver; changing it needs a maintainer.*
 7. **Update the configurations and add a tutorial one.** Retire
    `configs/llnl-lassen/`, since Lassen is retired. `configs/generic/`
    asks for upstream `cabana +hypre`, which rejects hypre 3; move it to
    the CUP-ECS fork from the `cupecs` repo, as `configs/github/` does.
    Add `configs/tutorial/`, a Spack environment for class tutorials based
    on the UAO one in `main`. `CHANGELOG.md` records the retirement.
+   *In PR #69, with `configs/tutorial-cuda/` for tutorial machines with
+   GPUs, Volta by default. The CUDA environments cannot concretize on
+   macOS and still need a check on a Linux CUDA machine.*
 8. **Run a second backend.** Only Kokkos' Serial backend has run the
    tests. Build and run them with the Threads backend locally; Apple
    Clang lacks OpenMP without extra work. The example accepts no
    `threads` device yet, so add it to `createSolver`. CUDA and HIP remain
-   untested, and the release notes say so.
+   untested, and the release notes say so. *The tests pass on Threads
+   locally; PR #68 adds the example's `threads` device. The harness runs
+   MPI tests on one Kokkos thread, which the author accepted.*
 9. **Update the workflow actions.** The build-and-test and
    `clang-format` workflows use `actions/checkout@v3`; the container
-   workflow uses v7. Changing a workflow needs a human.
-10. **Release.** Bring `README.md` up to date on building with hypre, the
+   workflow uses v7. Changing a workflow needs a human. *In PR #66.*
+10. **Fix the hypre stencil order in the CUP-ECS Cabana fork.**
+    `HypreStructuredSolver` gives hypre the grid extents in reversed axis
+    order but passes stencil offsets unchanged, so hypre solved a system
+    with i and j neighbors swapped. CabanaFluids depends on the fork
+    (`CUP-ECS/Cabana`, from the `cupecs` Spack repo) in every
+    configuration, so the fix goes there, with a Cabana unit test, and PR
+    #70 drops its offset-swap workaround. Order matters: merge the Cabana
+    fix, then pin the fixed commit in `configs/github/spack.yaml` in its
+    own pull request so CI's image rebuilds, and merge PR #70 only after
+    the new image is published. Upstreaming to ECP-copa/Cabana is the
+    author's, with the other Cabana developers; the configurations move
+    to upstream Cabana once it has the fix.
+11. **Fix the Silo output.** The example writes nothing unless
+    `data/raw/` exists, yet exits 0, and the `time` field in its Silo
+    files is uninitialized.
+12. **Release.** Bring `README.md` up to date on building with hypre, the
     solver options, and running the tests. Choose the version number;
     `CMakeLists.txt` says 0.2.0 and no tag exists. Write the release entry
     in `CHANGELOG.md`, then open the pull request from `develop` into
     `main`. Merging, tagging, publishing the GitHub release, and adding
     the release to the `cabanafluids` package in the `cupecs` Spack repo
-    are a human's steps.
+    are a human's steps. Once that package has the release, change
+    `cabanafluids@develop` in `configs/tutorial/` and
+    `configs/tutorial-cuda/` to the release.
 
 ## 1. Known Bugs
 

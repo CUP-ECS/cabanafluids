@@ -1,0 +1,24 @@
+# Spack environment specification for class tutorials that build and run
+# CabanaFluids on a Linux machine with an NVIDIA GPU, using nvcc through
+# Kokkos' wrapper. `configs/tutorial/` is the CPU-only version. Change
+# cuda_arch in every spec to the GPU's compute capability; 70 is Volta.
+# CabanaFluids requires a GPU-aware MPI with CUDA, so spack builds MPI with
+# CUDA support unless the machine's MPI is given as an external.
+spack:
+  specs:
+  - hdf5+mpi  # Silo should have an mpi-aware version of hdf5
+  - silo@4.12 # Specify a non-bsd versions since some of those don't build
+  - hypre +mpi +cuda cuda_arch=70
+  - kokkos@4 +serial +cuda +cuda_lambda +wrapper cuda_arch=70 cxxstd=17 # Kokkos 5 requires C++20
+  - cupecs.cabana@master +grid +hypre +mpi +serial +cuda cuda_arch=70 # Upstream rejects hypre 3
+  - cabanafluids@develop +hypre +cuda
+  concretizer:
+    unify: true
+  view: true
+
+  # Upstream Cabana's CMake asks for hypre 2.22.1 and rejects hypre 3, which
+  # Spack pairs with Cabana 0.8; the CUP-ECS fork and its package accept it
+  repos:
+    cupecs:
+      git: https://github.com/COMPASS-PSAAP/spack-packages.git
+      paths: [spack_pkgs/spack_repo/cupecs]

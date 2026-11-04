@@ -11,7 +11,7 @@ spack:
   - silo@4.12 # Specify a non-bsd versions since some of those don't build
   - hypre +mpi # Make sure we get an mpi version of hypre
   - kokkos@4 +serial cxxstd=17 # Kokkos 5 requires C++20
-  - cupecs.cabana@master +grid +hypre +mpi %gcc # Upstream rejects hypre 3
+  - cupecs.cabana@git.591b4de96c5e43e4c355b822f1403443a704ca1c=master +grid +hypre +mpi %gcc # Upstream rejects hypre 3; pinned past the stencil fix
   - googletest # Unit test framework
   concretizer:
     unify: true

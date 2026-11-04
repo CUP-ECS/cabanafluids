@@ -20,6 +20,55 @@ now initialize hypre once after `MPI_Init` and finalize it before
 `MPI_Finalize`; each hypre corrector used to initialize it, and nothing
 finalized it.
 
+**2026-11-04 — CI's image pins the fixed Cabana.** The CUP-ECS Cabana fork
+gave hypre its grid in reversed axis order but its stencil offsets unchanged,
+so every hypre solver solved a system with i and j neighbors swapped; its PR
+#51 fixes that. `configs/github/spack.yaml` now pins that merge commit, so the
+CI image rebuilds with the fix rather than picking up `master` whenever it
+next happens to rebuild.
+
+**2026-11-04 — CI requires hypre.** CI's container builds Cabana with hypre,
+but if it stopped doing so the hypre tests would compile out and CI would still
+pass, and CI's log cannot show whether they ran. The new
+`CabanaFluids_REQUIRE_HYPRE` option makes configure fail when Cabana lacks
+hypre, and `configs/github/host-config.cmake` sets it. Local builds keep hypre
+optional.
+
+**2026-11-04 — Silo output records its time and makes its directories.**
+`SiloWriter` passed the solver's `double` time where Silo's `DBOPT_TIME` reads
+a `float`, so the `time` field held half of a double's bits, and it passed
+`dt` as `DBOPT_DTIME`, so `dtime` held the step size. Both fields now hold the
+time. The writer also wrote nothing unless `data/raw/` already existed and
+still let the run exit 0; rank 0 now creates the directories, and a Silo file
+that cannot be created throws `std::runtime_error` on every rank. The new
+`SiloWriter` test suite covers both.
+
+**2026-11-04 — updated the Spack environments and added a tutorial one.**
+`configs/llnl-lassen/` is gone, because LLNL retired Lassen. The generic CUDA
+environments in `configs/generic/` asked for upstream `cabana +hypre`, whose
+CMake rejects hypre 3, and for the obsolete `hypre-cmake` package and
+`concretization` key; they now take the CUP-ECS Cabana fork from the `cupecs`
+repo, plain `hypre`, Kokkos 4 with C++17, and Silo 4.12, as
+`configs/github/spack.yaml` does. `configs/tutorial/spack.yaml` replaces the
+2022 UAO tutorial environment on `main` with a CPU-only one that students can
+build on Linux or macOS, using Kokkos' Serial and Threads backends. Many
+tutorial machines have GPUs, so `configs/tutorial-cuda/spack.yaml` is its CUDA
+counterpart, for Volta by default.
+
+**2026-11-04 — the example runs on Kokkos' Threads backend.** The unit tests
+already built for Threads, but `createSolver` rejected `-p threads` as an
+invalid backend, so the example could not run on it. It now builds a
+`Kokkos::Threads` solver under the same guards as `serial` and `openmp`, and
+`tstSolver` checks that it does. The `-p` help text and `README.md` list the
+backend names, and `README.md` now gives the real default, `default`, which
+picks Kokkos' default execution space and so runs Threads in a build that
+enables it.
+
+**2026-11-04 — `actions/checkout@v7` in every workflow.** The build-and-test
+and `clang-format` workflows used `actions/checkout@v3`, which ran on a Node
+release GitHub has retired, while the container workflow already used v7. All
+three now use v7.
+
 **2026-11-04 — merged `main` into `develop`.** `main` held one commit
 `develop` lacked, `d5a0b83` from 2022, so the release merge of `develop` into
 `main` conflicted in `ProblemManager.hpp`, `SiloWriter.hpp`, and `Solver.hpp`.
