@@ -306,6 +306,19 @@ createSolver( const std::string& device, MPI_Comm comm,
         throw std::runtime_error( "Serial Backend Not Enabled" );
 #endif
     }
+    else if ( 0 == device.compare( "threads" ) )
+    {
+#if defined( KOKKOS_ENABLE_THREADS ) && !defined( KOKKOS_ENABLE_CUDA ) &&      \
+    !defined( KOKKOS_ENABLE_HIP )
+        return std::make_shared<
+            CabanaFluids::Solver<2, Kokkos::Threads, Kokkos::HostSpace>>(
+            comm, global_bounding_box, global_num_cell, partitioner, density,
+            create_functor, bc, source, body, delta_t, matrix_solver,
+            preconditioner );
+#else
+        throw std::runtime_error( "Threads Backend Not Enabled" );
+#endif
+    }
     else if ( 0 == device.compare( "openmp" ) )
     {
 #if defined( KOKKOS_ENABLE_OPENMP ) && !defined( KOKKOS_ENABLE_CUDA ) &&       \

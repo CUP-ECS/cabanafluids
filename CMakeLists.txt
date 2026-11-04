@@ -20,6 +20,10 @@ endif()
 if( NOT Cabana_ENABLE_GRID )
   message( FATAL_ERROR "Cabana must be compiled with grid support" )
 endif()
+option(CabanaFluids_REQUIRE_HYPRE "Fail unless Cabana provides hypre" OFF)
+if( CabanaFluids_REQUIRE_HYPRE AND NOT Cabana_ENABLE_HYPRE )
+  message( FATAL_ERROR "Cabana must be compiled with hypre" )
+endif()
 find_package(SILO REQUIRED)
 
 # Get Clang Format to use for making sure the resulting code is

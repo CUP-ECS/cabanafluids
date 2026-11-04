@@ -8,6 +8,7 @@ set(MPI_TESTS
   VelocityCorrector
   InflowSource
   SiloWriter
+  Solver
   )
 
 Cabana_add_tests(MPI PACKAGE cabanafluids NAMES ${MPI_TESTS})
