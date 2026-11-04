@@ -2,6 +2,11 @@
 
 Newest first.
 
+**2026-11-04 — `actions/checkout@v7` in every workflow.** The build-and-test
+and `clang-format` workflows used `actions/checkout@v3`, which ran on a Node
+release GitHub has retired, while the container workflow already used v7. All
+three now use v7.
+
 **2026-11-04 — merged `main` into `develop`.** `main` held one commit
 `develop` lacked, `d5a0b83` from 2022, so the release merge of `develop` into
 `main` conflicted in `ProblemManager.hpp`, `SiloWriter.hpp`, and `Solver.hpp`.
