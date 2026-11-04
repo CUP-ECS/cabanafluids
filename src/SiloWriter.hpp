@@ -23,6 +23,10 @@
 #include <pmpio.h>
 #include <silo.h>
 
+#include <filesystem>
+#include <stdexcept>
+#include <string>
+
 namespace CabanaFluids
 {
 
@@ -60,7 +64,7 @@ class SiloWriter
      * @brief Writes the locally-owned portion of the mesh/variables to a file
      **/
     void writeFile( DBfile* dbfile, const char* meshname, int time_step,
-                    double time, double dt )
+                    double time, [[maybe_unused]] double dt )
     {
         // Initialize Variables
         int dims[Dims], zdims[Dims];
@@ -79,8 +83,10 @@ class SiloWriter
         Kokkos::Profiling::pushRegion( "SiloWriter::WriteFile::SetupOptions" );
         optlist = DBMakeOptlist( 10 );
         DBAddOption( optlist, DBOPT_CYCLE, &time_step );
-        DBAddOption( optlist, DBOPT_TIME, &time );
-        DBAddOption( optlist, DBOPT_DTIME, &dt );
+        // Silo reads DBOPT_TIME as a float and DBOPT_DTIME as a double time
+        float ftime = time;
+        DBAddOption( optlist, DBOPT_TIME, &ftime );
+        DBAddOption( optlist, DBOPT_DTIME, &time );
         int dbcoord = DB_CARTESIAN;
         DBAddOption( optlist, DBOPT_COORDSYS, &dbcoord );
         int dborder = DB_ROWMAJOR;
@@ -376,6 +382,14 @@ class SiloWriter
         MPI_Bcast( &numGroups, 1, MPI_INT, 0, MPI_COMM_WORLD );
         MPI_Bcast( &driver, 1, MPI_INT, 0, MPI_COMM_WORLD );
 
+        // A failure here shows up below as a failed Silo create
+        if ( _pm->mesh()->rank() == 0 )
+        {
+            std::error_code ignored;
+            std::filesystem::create_directories( "data/raw", ignored );
+        }
+        MPI_Barrier( MPI_COMM_WORLD );
+
         baton =
             PMPIO_Init( numGroups, PMPIO_WRITE, MPI_COMM_WORLD, 1,
                         createSiloFile, openSiloFile, closeSiloFile, &driver );
@@ -402,13 +416,20 @@ class SiloWriter
         Kokkos::Profiling::popRegion();
 
         Kokkos::Profiling::pushRegion( "SiloWriter::siloWrite::writeState" );
-        writeFile( silo_file, name, time_step, time, dt );
+        int wrote = silo_file != nullptr;
+        if ( wrote )
+            writeFile( silo_file, name, time_step, time, dt );
         if ( _pm->mesh()->rank() == 0 )
         {
             master_file = DBCreate( masterfilename, DB_CLOBBER, DB_LOCAL,
                                     "CabanaFluids", driver );
-            writeMultiObjects( master_file, baton, size, time_step, file_ext );
-            DBClose( master_file );
+            wrote = wrote && master_file;
+            if ( master_file )
+            {
+                writeMultiObjects( master_file, baton, size, time_step,
+                                   file_ext );
+                DBClose( master_file );
+            }
         }
         Kokkos::Profiling::popRegion();
 
@@ -421,6 +442,14 @@ class SiloWriter
         Kokkos::Profiling::popRegion();
 
         Kokkos::Profiling::popRegion(); // siloWrite
+
+        // Every rank throws, so none waits on a rank that has given up
+        MPI_Allreduce( MPI_IN_PLACE, &wrote, 1, MPI_INT, MPI_MIN,
+                       MPI_COMM_WORLD );
+        if ( !wrote )
+            throw std::runtime_error(
+                std::string( "SiloWriter could not create " ) + filename +
+                " or " + masterfilename );
     }
 
   private:
