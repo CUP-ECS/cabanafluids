@@ -6,12 +6,11 @@ it; the files it points at win where the two disagree.
 
 ## Current state
 
-- 2026-11-04: work toward the first release started on
-  `prepare-release`, branched from `origin/develop`. The plan is
-  Section 0 of `FUTURE.md`: reconcile `main`, test hypre locally and in
-  CI, remove the CajitaFluids name, and prepare the release. Nothing
-  beyond the plan is done yet. Issue #54 and the numerics wait until
-  after the release.
+- 2026-11-04: work toward the first release follows Section 0 of
+  `FUTURE.md`, which records each step's status and pull request. Steps
+  run in parallel on separate branches from `develop`, so their
+  `CHANGELOG.md` entries conflict at the top as they merge. Issue #54
+  and the numerics wait until after the release.
 
 - `cabanafluids-cleanup` was rebased onto `develop` and merged as PR
   #60; its branches are deleted. `CHANGELOG.md` records what changed
@@ -23,12 +22,12 @@ it; the files it points at win where the two disagree.
   about an hour. Changing the workflow or the image needs a human.
 - The image builds the CUP-ECS Cabana fork's `master` with `+hypre`
   from the `cupecs` repo in COMPASS-PSAAP/spack-packages, because
-  upstream Cabana's CMake rejects hypre 3. Local builds use the same
-  fork without hypre, so only CI compiles the hypre solver path, and no
-  test runs it: the `VelocityCorrector` tests ask for `"Reference"`.
-- The tests have run only with Kokkos' Serial backend, on macOS and in
-  CI's Linux container, where all 18 pass. OpenMP, CUDA, and HIP builds
-  of the harness are untested.
+  upstream Cabana's CMake rejects hypre 3. Since 2026-11-04 the local
+  Spack environment builds the same fork with `+hypre +threads`, so
+  local builds compile the hypre path too.
+- The tests run with Kokkos' Serial backend locally and in CI, and with
+  Threads locally. OpenMP, CUDA, and HIP builds of the harness are
+  untested.
 
 ## Design decisions
 
@@ -50,9 +49,11 @@ it; the files it points at win where the two disagree.
   side" records those resolutions and replays them silently later; clear
   the `.git/rr-cache` entries a trial created.
 - Local build: configure against the Spack view in
-  `../.spack-env/view`, with `mpicxx` as the compiler and
-  `CMAKE_PREFIX_PATH` copied from the Spack build's `CMakeCache.txt`
-  under `build-darwin-*/`. Sourcing that build's `spack-build-env.txt`
+  `../.spack-env/view`, with its `mpicxx` and `mpicc` as the compilers
+  and `-DCMAKE_PREFIX_PATH` set to the view; that suffices since the
+  2026-11-04 rebuild. Use a build directory outside the repository. The
+  older recipe copied `CMAKE_PREFIX_PATH` from the Spack build's
+  `CMakeCache.txt` under `build-darwin-*/`. Sourcing that build's `spack-build-env.txt`
   aborts the shell, and the file holds an API key; never commit or quote
   it.
 - A new test suite is `tests/tst<Name>.hpp` plus an entry in `MPI_TESTS`
@@ -71,11 +72,9 @@ it; the files it points at win where the two disagree.
 ## Open questions
 
 - `VelocityCorrector` caps CG at `10 * sqrt(ncells)` iterations, from
-  `develop`. It suffices for the 64x64 test mesh; nobody has checked it
-  at production sizes or with HYPRE solvers.
-- A `VelocityCorrector` test that selects a hypre solver would exercise
-  the hypre path in CI; it needs `Cabana_ENABLE_HYPRE` guards, since
-  local builds lack hypre.
+  `develop`. It suffices for the 64x64 test mesh with every solver PR
+  #70 tests except `GMRES` with `Diagonal`; nobody has checked it at
+  production sizes.
 - `FUTURE.md` holds the remaining test plan and the advection rewrite.
 - Waiting on the author: the release version number.
 - Decided 2026-11-04: the example keeps Cabana's built-in CG
@@ -83,3 +82,10 @@ it; the files it points at win where the two disagree.
   Threads, because Apple Clang lacks OpenMP; Lassen and Quartz are
   retired, so their configurations go; a tutorial Spack environment
   replaces the UAO one from `main`.
+- Decided 2026-11-04, later: Cabana bugs are fixed in the CUP-ECS fork,
+  which every configuration uses, and the author upstreams them; the
+  hypre default preconditioner changes; CI's configure requires hypre;
+  tutorials get CPU and CUDA environments, Volta by default, pinned to
+  `develop` until the release; MPI tests need not run Threads with
+  more than one thread; roundoff-level differences between backends are
+  acceptable; the Silo output bugs are fixed before the release.
