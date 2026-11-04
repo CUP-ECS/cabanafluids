@@ -7,6 +7,7 @@ set(MPI_TESTS
   TimeIntegrator
   VelocityCorrector
   InflowSource
+  Solver
   )
 
 Cabana_add_tests(MPI PACKAGE cabanafluids NAMES ${MPI_TESTS})

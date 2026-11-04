@@ -56,7 +56,7 @@ options:
 
 | Option | Meaning | Default |
 | --- | --- | --- |
-| `-p` | Kokkos backend: `serial`, `openmp`, `cuda`, or `hip` | `serial` (`cuda` in CUDA builds) |
+| `-p` | Kokkos backend: `default`, `serial`, `threads`, `openmp`, `cuda`, or `hip` | `default`, Kokkos' default execution space |
 | `-n` | Cells per dimension | 128 |
 | `-t` | Simulated time | 4.0 |
 | `-i` | Maximum time step | 0.005 |
