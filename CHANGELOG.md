@@ -2,6 +2,18 @@
 
 Newest first.
 
+**2026-11-04 — updated the Spack environments and added a tutorial one.**
+`configs/llnl-lassen/` is gone, because LLNL retired Lassen. The generic CUDA
+environments in `configs/generic/` asked for upstream `cabana +hypre`, whose
+CMake rejects hypre 3, and for the obsolete `hypre-cmake` package and
+`concretization` key; they now take the CUP-ECS Cabana fork from the `cupecs`
+repo, plain `hypre`, Kokkos 4 with C++17, and Silo 4.12, as
+`configs/github/spack.yaml` does. `configs/tutorial/spack.yaml` replaces the
+2022 UAO tutorial environment on `main` with a CPU-only one that students can
+build on Linux or macOS, using Kokkos' Serial and Threads backends. Many
+tutorial machines have GPUs, so `configs/tutorial-cuda/spack.yaml` is its CUDA
+counterpart, for Volta by default.
+
 **2026-11-04 — the example runs on Kokkos' Threads backend.** The unit tests
 already built for Threads, but `createSolver` rejected `-p threads` as an
 invalid backend, so the example could not run on it. It now builds a
