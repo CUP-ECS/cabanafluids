@@ -2,6 +2,13 @@
 
 Newest first.
 
+**2026-11-04 — CI requires hypre.** CI's container builds Cabana with hypre,
+but if it stopped doing so the hypre tests would compile out and CI would still
+pass, and CI's log cannot show whether they ran. The new
+`CabanaFluids_REQUIRE_HYPRE` option makes configure fail when Cabana lacks
+hypre, and `configs/github/host-config.cmake` sets it. Local builds keep hypre
+optional.
+
 **2026-11-04 — Silo output records its time and makes its directories.**
 `SiloWriter` passed the solver's `double` time where Silo's `DBOPT_TIME` reads
 a `float`, so the `time` field held half of a double's bits, and it passed
