@@ -2,6 +2,21 @@
 
 Newest first.
 
+**2026-11-04 — tested the hypre solvers and fixed their stencil.** No test had
+run the hypre pressure solve. `tstVelocityCorrector` now runs every case with
+`Reference`/`Jacobi` and, when Cabana has hypre, with hypre's `PCG`/`Diagonal`,
+`PCG`/`PFMG`, `GMRES`/`PFMG`, `BiCGSTAB`/`Diagonal`, `PFMG`, and `SMG`, and
+checks that each hypre solve matches the reference one. Every hypre solver
+failed: Cabana gives hypre the grid in (j, i) order but passes stencil offsets
+through as (i, j), so the wall entries of the pressure matrix landed on the
+wrong neighbors. `VelocityCorrector` now swaps the offsets for hypre until
+Cabana does. Hypre's `Jacobi` preconditioner stalls `PCG` and `GMRES` on the
+all-solid test system, and `GMRES`/`Diagonal` reaches the `10 * sqrt(ncells)`
+iteration cap, so the tests use the pairs above. The example and the test main
+now initialize hypre once after `MPI_Init` and finalize it before
+`MPI_Finalize`; each hypre corrector used to initialize it, and nothing
+finalized it.
+
 **2026-11-01 — rebased onto `develop` and its test harness.** `develop`
 replaced BLT with plain CMake and Cabana's test harness, as this branch had
 done separately; the rebase keeps `develop`'s build. The harness registered no
