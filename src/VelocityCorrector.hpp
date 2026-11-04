@@ -24,6 +24,8 @@
 #include <cmath>
 #include <memory>
 #include <string>
+#include <type_traits>
+#include <utility>
 
 #include <mpi.h>
 
@@ -98,6 +100,13 @@ class VelocityCorrector<2, ExecutionSpace, MemorySpace, SparseSolver>
         // condition object.
         std::vector<std::array<int, 2>> stencil = {
             { 0, 0 }, { -1, 0 }, { 1, 0 }, { 0, -1 }, { 0, 1 } };
+#ifdef Cabana_ENABLE_HYPRE
+        // Cabana gives hypre the grid in (j, i) order but passes stencil
+        // offsets through unchanged, so hypre needs them in (j, i) order too
+        if constexpr ( std::is_same<SparseSolver, hypre_solver_type>::value )
+            for ( auto& offset : stencil )
+                std::swap( offset[0], offset[1] );
+#endif
         _pressure_solver->setMatrixStencil( stencil, false );
 
         // Fill the associated matrix assocuated with with values
