@@ -1,10 +1,17 @@
 # Session memory
 
 Reasoning worth carrying between agent sessions that belongs in no other
-file. Written 2026-11-01, updated 2026-11-03. Verify before acting on
+file. Written 2026-11-01, updated 2026-11-04. Verify before acting on
 it; the files it points at win where the two disagree.
 
 ## Current state
+
+- 2026-11-04: work toward the first release started on
+  `prepare-release`, branched from `origin/develop`. The plan is
+  Section 0 of `FUTURE.md`: reconcile `main`, test hypre locally and in
+  CI, remove the CajitaFluids name, and prepare the release. Nothing
+  beyond the plan is done yet. Issue #54 and the numerics wait until
+  after the release.
 
 - `cabanafluids-cleanup` was rebased onto `develop` and merged as PR
   #60; its branches are deleted. `CHANGELOG.md` records what changed
@@ -70,3 +77,9 @@ it; the files it points at win where the two disagree.
   the hypre path in CI; it needs `Cabana_ENABLE_HYPRE` guards, since
   local builds lack hypre.
 - `FUTURE.md` holds the remaining test plan and the advection rewrite.
+- Waiting on the author: the release version number.
+- Decided 2026-11-04: the example keeps Cabana's built-in CG
+  (`Reference`) as its default solver; the second local backend is
+  Threads, because Apple Clang lacks OpenMP; Lassen and Quartz are
+  retired, so their configurations go; a tutorial Spack environment
+  replaces the UAO one from `main`.

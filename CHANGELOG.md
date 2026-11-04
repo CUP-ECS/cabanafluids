@@ -11,6 +11,22 @@ backend names, and `README.md` now gives the real default, `default`, which
 picks Kokkos' default execution space and so runs Threads in a build that
 enables it.
 
+**2026-11-04 — `actions/checkout@v7` in every workflow.** The build-and-test
+and `clang-format` workflows used `actions/checkout@v3`, which ran on a Node
+release GitHub has retired, while the container workflow already used v7. All
+three now use v7.
+
+**2026-11-04 — merged `main` into `develop`.** `main` held one commit
+`develop` lacked, `d5a0b83` from 2022, so the release merge of `develop` into
+`main` conflicted in `ProblemManager.hpp`, `SiloWriter.hpp`, and `Solver.hpp`.
+The merge keeps `develop`'s `Cabana::Grid` code and ports `main`'s fixes: the
+I- and J-face velocity getters return the face-array view types, and Silo
+output files end in `.silo` instead of `.pdb`, which changes the example's
+output file names. `develop` already balanced the profiling regions in
+`Solver`, so its version stays. The merge drops
+`configs/tutorial-uao-cuda/spack.yaml`; the `update-spack-configs` branch
+replaces it with `configs/tutorial/`.
+
 **2026-11-01 — rebased onto `develop` and its test harness.** `develop`
 replaced BLT with plain CMake and Cabana's test harness, as this branch had
 done separately; the rebase keeps `develop`'s build. The harness registered no
