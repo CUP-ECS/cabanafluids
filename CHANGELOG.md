@@ -9,6 +9,15 @@ pass, and CI's log cannot show whether they ran. The new
 hypre, and `configs/github/host-config.cmake` sets it. Local builds keep hypre
 optional.
 
+**2026-11-04 — Silo output records its time and makes its directories.**
+`SiloWriter` passed the solver's `double` time where Silo's `DBOPT_TIME` reads
+a `float`, so the `time` field held half of a double's bits, and it passed
+`dt` as `DBOPT_DTIME`, so `dtime` held the step size. Both fields now hold the
+time. The writer also wrote nothing unless `data/raw/` already existed and
+still let the run exit 0; rank 0 now creates the directories, and a Silo file
+that cannot be created throws `std::runtime_error` on every rank. The new
+`SiloWriter` test suite covers both.
+
 **2026-11-04 — updated the Spack environments and added a tutorial one.**
 `configs/llnl-lassen/` is gone, because LLNL retired Lassen. The generic CUDA
 environments in `configs/generic/` asked for upstream `cabana +hypre`, whose
