@@ -57,4 +57,4 @@ KOKKOS_INLINE_FUNCTION void interpolateVelocity( const double loc[NumSpaceDims],
 } // end namespace Interpolation
 } // end namespace CabanaFluids
 
-#endif // end CAJITAFLUIDS_INTERPOLATION_HPP
+#endif // end CABANAFLUIDS_INTERPOLATION_HPP
