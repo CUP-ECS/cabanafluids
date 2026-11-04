@@ -2,6 +2,17 @@
 
 Newest first.
 
+**2026-11-04 — CI's image takes its build tools from Ubuntu.** Most of the 64
+packages Spack built for the image were tools and their dependencies, such as
+CMake, Git, Perl, Python, and OpenSSL, and Spack's builds of `git` and `tar` were what crashed checkout when they
+targeted the wrong CPU. `configs/github/spack.yaml` now declares Ubuntu 24.04's
+packages for those tools, their compression and terminal libraries, and
+GoogleTest as Spack externals, so apt's generic x86-64 builds serve them. Spack
+still builds OpenMPI, HDF5, Silo, hypre, Kokkos, and Cabana, so their versions
+keep matching local environments. `git` and `cmake` are no longer roots of the
+environment, since Spack does not link externals into the view; CI's `PATH`
+finds Ubuntu's copies in `/usr/bin`.
+
 **2026-11-04 — CI's image builds for a portable target.** Spack built each
 image for the CPU of whichever runner built it: `zen2` for the old image and
 `x86_64_v4`, which uses AVX-512, for the one PR #75 published. Test runners
