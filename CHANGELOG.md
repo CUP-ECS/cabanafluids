@@ -2,6 +2,13 @@
 
 Newest first.
 
+**2026-11-04 — CI's image pins the fixed Cabana.** The CUP-ECS Cabana fork
+gave hypre its grid in reversed axis order but its stencil offsets unchanged,
+so every hypre solver solved a system with i and j neighbors swapped; its PR
+#51 fixes that. `configs/github/spack.yaml` now pins that merge commit, so the
+CI image rebuilds with the fix rather than picking up `master` whenever it
+next happens to rebuild.
+
 **2026-11-04 — CI requires hypre.** CI's container builds Cabana with hypre,
 but if it stopped doing so the hypre tests would compile out and CI would still
 pass, and CI's log cannot show whether they ran. The new
