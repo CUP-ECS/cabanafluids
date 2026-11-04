@@ -31,7 +31,8 @@ Sources:
 ## Building and Testing
 
 CabanaFluids requires CMake 3.18 or later, a C++17 compiler, MPI, Cabana
-built with MPI and grid support, and Silo. HYPRE is optional. The unit
+built with MPI and grid support, and Silo. HYPRE is optional; configure
+with `-DCabanaFluids_REQUIRE_HYPRE=ON` to fail when Cabana lacks it. The unit
 tests need GoogleTest; configure with `-DCabanaFluids_ENABLE_TESTING=OFF`
 to skip them.
 The `configs` directory holds Spack environments for several systems.

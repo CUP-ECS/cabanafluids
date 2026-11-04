@@ -320,7 +320,7 @@ class ProblemManager<2, ExecutionSpace, MemorySpace>
      * @param Version::Current
      * @return Returns view of current norm velocity magnitude on i faces
      **/
-    typename cell_array::view_type
+    typename iface_array::view_type
     get( Cabana::Grid::Face<Cabana::Grid::Dim::I>, Field::Velocity,
          Version::Current ) const
     {
@@ -334,7 +334,7 @@ class ProblemManager<2, ExecutionSpace, MemorySpace>
      * @param Version::Next
      * @return Returns view of next norm velocity magnitude on i faces
      **/
-    typename cell_array::view_type
+    typename iface_array::view_type
     get( Cabana::Grid::Face<Cabana::Grid::Dim::I>, Field::Velocity,
          Version::Next ) const
     {
@@ -348,7 +348,7 @@ class ProblemManager<2, ExecutionSpace, MemorySpace>
      * @param Version::Current
      * @return Returns view of current norm velocity magnitude on j faces
      **/
-    typename cell_array::view_type
+    typename jface_array::view_type
     get( Cabana::Grid::Face<Cabana::Grid::Dim::J>, Field::Velocity,
          Version::Current ) const
     {
@@ -362,7 +362,7 @@ class ProblemManager<2, ExecutionSpace, MemorySpace>
      * @param Version::Next
      * @return Returns view of next norm velocity magnitude on j faces
      **/
-    typename cell_array::view_type
+    typename jface_array::view_type
     get( Cabana::Grid::Face<Cabana::Grid::Dim::J>, Field::Velocity,
          Version::Next ) const
     {

@@ -231,4 +231,4 @@ void step( const ExecutionSpace& exec_space, ProblemManagerType& pm,
 } // end namespace TimeIntegrator
 } // end namespace CabanaFluids
 
-#endif // CAJITAFLUIDS_TIMEINTEGRATOR_HPP
+#endif // CABANAFLUIDS_TIMEINTEGRATOR_HPP
