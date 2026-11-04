@@ -10,7 +10,9 @@ CMake rejects hypre 3, and for the obsolete `hypre-cmake` package and
 repo, plain `hypre`, Kokkos 4 with C++17, and Silo 4.12, as
 `configs/github/spack.yaml` does. `configs/tutorial/spack.yaml` replaces the
 2022 UAO tutorial environment on `main` with a CPU-only one that students can
-build on Linux or macOS, using Kokkos' Serial and Threads backends.
+build on Linux or macOS, using Kokkos' Serial and Threads backends. Many
+tutorial machines have GPUs, so `configs/tutorial-cuda/spack.yaml` is its CUDA
+counterpart, for Volta by default.
 
 **2026-11-01 — rebased onto `develop` and its test harness.** `develop`
 replaced BLT with plain CMake and Cabana's test harness, as this branch had

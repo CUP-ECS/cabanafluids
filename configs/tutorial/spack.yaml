@@ -5,10 +5,10 @@
 # out the right version and options for hypre and MPI so we don't specify
 # them here.
 #
-# To build for CUDA instead, add `+cuda cuda_arch=<arch>` to the hypre, kokkos,
-# cabana, and cabanafluids specs, `+cuda_lambda` to kokkos, and either
-# `+wrapper` to kokkos or `%clang` to kokkos and cabana; set <arch> to the
-# GPU's compute capability (70 for Volta). `configs/generic/` has examples.
+# To build for CUDA instead, use `configs/tutorial-cuda/`, which adds
+# `+cuda cuda_arch=<arch>` to the hypre, kokkos, cabana, and cabanafluids
+# specs, and `+cuda_lambda` and `+wrapper` to kokkos; set <arch> to the GPU's
+# compute capability (70 for Volta). `configs/generic/` also shows `%clang`.
 spack:
   specs:
   - hdf5+mpi  # Silo should have an mpi-aware version of hdf5
