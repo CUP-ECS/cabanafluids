@@ -404,4 +404,4 @@ createVelocityCorrector( const std::shared_ptr<ProblemManagerType>& pm,
 
 } // namespace CabanaFluids
 
-#endif // CAJITAFLUIDS_VELOCITYCORRECTOR
+#endif // CABANAFLUIDS_VELOCITYCORRECTOR_HPP
