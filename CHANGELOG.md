@@ -9,8 +9,8 @@ run the hypre pressure solve. `tstVelocityCorrector` now runs every case with
 checks that each hypre solve matches the reference one. Every hypre solver
 failed: Cabana gives hypre the grid in (j, i) order but passes stencil offsets
 through as (i, j), so the wall entries of the pressure matrix landed on the
-wrong neighbors. `VelocityCorrector` now swaps the offsets for hypre until
-Cabana does. Hypre's `Jacobi` preconditioner stalls `PCG` and `GMRES` on the
+wrong neighbors. CUP-ECS/Cabana PR #51 fixes this in the Cabana fork that
+CabanaFluids builds against, and CI's image pins that fix. Hypre's `Jacobi` preconditioner stalls `PCG` and `GMRES` on the
 all-solid test system, and `GMRES`/`Diagonal` reaches the `10 * sqrt(ncells)`
 iteration cap, so the tests use the pairs above. When the example names a
 hypre solver without `-c`, `createVelocityCorrector` now picks `PFMG` for the
