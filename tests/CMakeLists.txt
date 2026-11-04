@@ -7,6 +7,7 @@ set(MPI_TESTS
   TimeIntegrator
   VelocityCorrector
   InflowSource
+  SiloWriter
   Solver
   )
 
