@@ -28,7 +28,6 @@ target_include_directories(cabanafluids
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
 install(TARGETS cabanafluids
-  EXPORT Cabana_Targets
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 

@@ -1,6 +1,3 @@
-#ifndef _TSTMESH_HPP_
-#define _TSTMESH_HPP_
-
 #include "gtest/gtest.h"
 
 #include <Cabana_Core.hpp>
@@ -11,60 +8,79 @@
 
 #include <mpi.h>
 
+#include "MeshFixture.hpp"
 #include "tstDriver.hpp"
 
-/*
- * Parameterizing on number of dimensions in here is messy and we
- * don't do it yet. We'll sort that out when we move to 3D as well.
- * These webpage has some ideas on how to I haven't yet deciphered:
- * 1. http://www.ashermancinelli.com/gtest-type-val-param
- * 2.
- * https://stackoverflow.com/questions/8507385/google-test-is-there-a-way-to-combine-a-test-which-is-both-type-parameterized-a
- */
+TYPED_TEST_SUITE( MeshTest, MeshDeviceTypes );
 
-template <class T>
-class MeshTest : public ::testing::Test
+TYPED_TEST( MeshTest, BasicParameters )
 {
-    // We need Cabana Grid Arrays
-    // Convenience type declarations
-    using Cell = Cabana::Grid::Cell;
+    int r;
+    EXPECT_EQ( this->testMesh_->cellSize(), this->boxWidth_ / this->boxCells_ );
 
-    using cell_array = Cabana::Grid::Array<double, Cabana::Grid::Cell,
-                                           Cabana::Grid::UniformMesh<double, 2>,
-                                           typename T::MemorySpace>;
-    using iface_array =
-        Cabana::Grid::Array<double, Cabana::Grid::Face<Cabana::Grid::Dim::I>,
-                            Cabana::Grid::UniformMesh<double, 2>,
-                            typename T::MemorySpace>;
-    using jface_array =
-        Cabana::Grid::Array<double, Cabana::Grid::Face<Cabana::Grid::Dim::J>,
-                            Cabana::Grid::UniformMesh<double, 2>,
-                            typename T::MemorySpace>;
-    using mesh_type = CabanaFluids::Mesh<2, typename T::ExecutionSpace,
-                                         typename T::MemorySpace>;
+    auto mins = this->testMesh_->minDomainGlobalCellIndex();
+    EXPECT_EQ( mins[0], 0 );
+    EXPECT_EQ( mins[1], 0 );
+    auto maxs = this->testMesh_->maxDomainGlobalCellIndex();
+    EXPECT_EQ( maxs[0], this->boxCells_ - 1 );
+    EXPECT_EQ( maxs[1], this->boxCells_ - 1 );
 
-  protected:
-    const double boxWidth_ = 1.0;
-    const int haloWidth_ = 3;
-    const int boxCells_ = 512;
+    MPI_Comm_rank( MPI_COMM_WORLD, &r );
+    EXPECT_EQ( this->testMesh_->rank(), r );
+}
 
-    virtual void SetUp() override
+TYPED_TEST( MeshTest, LocalGridSetup )
+{
+    /* Here we check that the local grid is decomposed like
+     * we think it should be. That is, the number of ghosts cells
+     * is right, the index spaces for owned, ghost, and boundary
+     * cells are right, and so on. */
+    auto local_grid = this->testMesh_->localGrid();
+    auto global_grid = local_grid->globalGrid();
+    for ( int i = 0; i < 2; i++ )
     {
-        // Allocate and initialize the Cabana::Grid mesh
-        globalBoundingBox_ = { 0, 0, boxWidth_, boxWidth_ };
-        globalNumCells_ = { boxCells_, boxCells_ };
-        testMesh_ = std::make_shared<mesh_type>( globalBoundingBox_,
-                                                 globalNumCells_, partitioner_,
-                                                 haloWidth_, MPI_COMM_WORLD );
+        EXPECT_EQ( this->boxCells_,
+                   global_grid.globalNumEntity( Cabana::Grid::Cell(), i ) );
     }
 
-    virtual void TearDown() override { testMesh_ = NULL; }
+    /* Make sure the number of owned cells is our share of what was requested */
+    auto own_local_cell_space = local_grid->indexSpace(
+        Cabana::Grid::Own(), Cabana::Grid::Cell(), Cabana::Grid::Local() );
+    for ( int i = 0; i < 2; i++ )
+    {
+        int share = this->boxCells_ / global_grid.dimNumBlock( i );
+        EXPECT_GE( own_local_cell_space.extent( i ), share );
+        EXPECT_LE( own_local_cell_space.extent( i ), share + 1 );
+    }
 
-    Cabana::Grid::DimBlockPartitioner<2> partitioner_;
-    std::array<int, 2> globalNumCells_;
-    Kokkos::Array<double, 4> globalBoundingBox_;
+    /*
+     * Next we extract the ghosted faces, which encompass the owned faces and
+     * the ghosts in each dimension. Note that for faces there is a template
+     * dimension parameter - there is a * separate index space for each
+     * spatial dimension.
+     */
+    auto ghost_local_face_space = local_grid->indexSpace(
+        Cabana::Grid::Ghost(), Cabana::Grid::Face<Cabana::Grid::Dim::I>(),
+        Cabana::Grid::Local() );
+    EXPECT_EQ( ghost_local_face_space.extent( 0 ),
+               own_local_cell_space.extent( 0 ) + 2 * this->haloWidth_ + 1 );
+    EXPECT_EQ( ghost_local_face_space.extent( 1 ),
+               own_local_cell_space.extent( 1 ) + 2 * this->haloWidth_ );
+}
 
-    std::shared_ptr<mesh_type> testMesh_;
-};
+TYPED_TEST( MeshTest, DivisibilityCheck )
+{
+    using mesh_type = CabanaFluids::Mesh<2, typename TypeParam::ExecutionSpace,
+                                         typename TypeParam::MemorySpace>;
 
-#endif // _TSTMESH_HPP_
+    // 88 cells of 100 / 88 miss the extent by 1.4e-14: more than ten
+    // epsilons, but well within the relative round-off of the extent
+    Kokkos::Array<double, 4> large_box = { 0, 0, 100.0, 100.0 };
+    EXPECT_NO_THROW( mesh_type( large_box, { 88, 88 }, this->partitioner_,
+                                this->haloWidth_, MPI_COMM_WORLD ) );
+
+    Kokkos::Array<double, 4> uneven_box = { 0, 0, 1.0, 1.5 };
+    EXPECT_THROW( mesh_type( uneven_box, { 32, 32 }, this->partitioner_,
+                             this->haloWidth_, MPI_COMM_WORLD ),
+                  std::logic_error );
+}

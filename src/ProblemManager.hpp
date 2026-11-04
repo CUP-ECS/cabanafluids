@@ -182,7 +182,8 @@ class ProblemManager<2, ExecutionSpace, MemorySpace>
 
     /**
      * Initializes state values in the cells
-     * @param create_functor Initialization function
+     * @param create_functor Initialization function, which receives the global
+     * index and the position of each owned entity
      **/
     template <class InitFunctor>
     void initialize( const InitFunctor& create_functor )
@@ -206,12 +207,15 @@ class ProblemManager<2, ExecutionSpace, MemorySpace>
         int index[2] = { 0, 0 };
         double loc[2]; // x/y loocation of the cell at 0, 0
         local_mesh.coordinates( Cabana::Grid::Cell(), index, loc );
+        auto l2g_cell = Cabana::Grid::IndexConversion::createL2G(
+            local_grid, Cabana::Grid::Cell() );
         Kokkos::parallel_for(
             "Initialize Cells`",
             Cabana::Grid::createExecutionPolicy( own_cells, ExecutionSpace() ),
             KOKKOS_LAMBDA( const int i, const int j ) {
                 // Get Coordinates Associated with Indices ( i, j, k )
-                int coords[2] = { i, j };
+                int coords[2];
+                l2g_cell( i, j, coords[0], coords[1] );
                 double x[2];
                 x[0] = loc[0] + cell_size * i;
                 x[1] = loc[1] + cell_size * j;
@@ -228,12 +232,15 @@ class ProblemManager<2, ExecutionSpace, MemorySpace>
                       Field::Velocity(), Version::Current() );
         local_mesh.coordinates( Cabana::Grid::Face<Cabana::Grid::Dim::I>(),
                                 index, loc );
+        auto l2g_facei = Cabana::Grid::IndexConversion::createL2G(
+            local_grid, Cabana::Grid::Face<Cabana::Grid::Dim::I>() );
         Kokkos::parallel_for(
             "Initialize I-Faces",
             Cabana::Grid::createExecutionPolicy( own_faces, ExecutionSpace() ),
             KOKKOS_LAMBDA( const int i, const int j ) {
                 // Get Coordinates Associated with Indices ( i, j )
-                int coords[2] = { i, j };
+                int coords[2];
+                l2g_facei( i, j, coords[0], coords[1] );
                 double x[2];
                 x[0] = loc[0] + cell_size * i;
                 x[1] = loc[1] + cell_size * j;
@@ -251,12 +258,15 @@ class ProblemManager<2, ExecutionSpace, MemorySpace>
                       Field::Velocity(), Version::Current() );
         local_mesh.coordinates( Cabana::Grid::Face<Cabana::Grid::Dim::J>(),
                                 index, loc );
+        auto l2g_facej = Cabana::Grid::IndexConversion::createL2G(
+            local_grid, Cabana::Grid::Face<Cabana::Grid::Dim::J>() );
         Kokkos::parallel_for(
             "Initialize J-Faces",
             Cabana::Grid::createExecutionPolicy( own_faces, ExecutionSpace() ),
             KOKKOS_LAMBDA( const int i, const int j ) {
                 // Get Coordinates Associated with Indices ( i, j )
-                int coords[2] = { i, j };
+                int coords[2];
+                l2g_facej( i, j, coords[0], coords[1] );
                 double x[2];
 
                 x[0] = loc[0] + cell_size * i;

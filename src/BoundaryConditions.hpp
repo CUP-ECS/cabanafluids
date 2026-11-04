@@ -21,6 +21,8 @@
 
 #include <Mesh.hpp>
 
+#include <type_traits>
+
 namespace CabanaFluids
 {
 /**
@@ -127,6 +129,65 @@ struct BoundaryCondition<2>
         if ( ( gj > max[1] ) && ( boundary_type[3] == BoundaryType::SOLID ) )
         {
             v( i, j, 0 ) = 0;
+        }
+    }
+
+    // Halo gathers fill only the ghosts shared with other ranks. Fill the
+    // ghosts outside the physical domain by reflecting the field across each
+    // wall. Velocity normal to a solid wall is odd about the wall, so it
+    // interpolates to zero there; every other value is even.
+    template <class ExecutionSpace, class LocalGrid_t, class Entity_t,
+              class View_t>
+    void fillGhosts( const ExecutionSpace& exec_space,
+                     const LocalGrid_t& local_grid, Entity_t entity,
+                     const View_t& field ) const
+    {
+        auto ghost_space = local_grid.indexSpace( Cabana::Grid::Ghost(), entity,
+                                                  Cabana::Grid::Local() );
+        auto l2g =
+            Cabana::Grid::IndexConversion::createL2G( local_grid, entity );
+        const bool face_aligned[2] = { std::is_same<Entity_t, FaceI>::value,
+                                       std::is_same<Entity_t, FaceJ>::value };
+
+        // Fill one dimension at a time so corner ghosts reflect across both
+        // walls
+        for ( int d = 0; d < 2; d++ )
+        {
+            // Face-aligned entities mirror about the wall face; others mirror
+            // about the wall between the first cell and its ghost
+            int offset = face_aligned[d] ? 1 : 0;
+            int lo = min[d], hi = max[d] + offset;
+            int lo_mirror = 2 * min[d] - 1 + offset;
+            int hi_mirror = 2 * max[d] + 1 + offset;
+            double lo_sign =
+                ( face_aligned[d] && boundary_type[d] == BoundaryType::SOLID )
+                    ? -1.0
+                    : 1.0;
+            double hi_sign = ( face_aligned[d] &&
+                               boundary_type[d + 2] == BoundaryType::SOLID )
+                                 ? -1.0
+                                 : 1.0;
+            Kokkos::parallel_for(
+                "fill wall ghosts",
+                createExecutionPolicy( ghost_space, exec_space ),
+                KOKKOS_LAMBDA( const int i, const int j ) {
+                    int g[2], src[2] = { i, j };
+                    double sign;
+                    l2g( i, j, g[0], g[1] );
+                    if ( g[d] < lo )
+                    {
+                        src[d] += lo_mirror - 2 * g[d];
+                        sign = lo_sign;
+                    }
+                    else if ( g[d] > hi )
+                    {
+                        src[d] += hi_mirror - 2 * g[d];
+                        sign = hi_sign;
+                    }
+                    else
+                        return;
+                    field( i, j, 0 ) = sign * field( src[0], src[1], 0 );
+                } );
         }
     }
 

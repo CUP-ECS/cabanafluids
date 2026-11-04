@@ -103,14 +103,15 @@ class VelocityCorrector<2, ExecutionSpace, MemorySpace, SparseSolver>
         // Fill the associated matrix assocuated with with values
         fillMatrixValues( _pressure_solver );
 
-	// Put a high limit on iteration count, assuming we're using
-	// a roughly preconditioned CG solver
-	int ncells = 1;
+        // Put a high limit on iteration count, assuming we're using
+        // a roughly preconditioned CG solver
+        int ncells = 1;
         auto gmesh = _mesh->localGrid()->globalGrid().globalMesh();
-	for (int i = 0; i < 2; i++) {
-	    ncells = gmesh.globalNumCell(i);
-	}
-	int itermax = 10 * sqrt((double)ncells);
+        for ( int i = 0; i < 2; i++ )
+        {
+            ncells *= gmesh.globalNumCell( i );
+        }
+        int itermax = 10 * sqrt( (double)ncells );
 
         _pressure_solver->setTolerance( 1.0e-6 );
         _pressure_solver->setMaxIter( itermax );
@@ -222,6 +223,36 @@ class VelocityCorrector<2, ExecutionSpace, MemorySpace, SparseSolver>
                 rhs( i, j, 0 ) = -scale * ( u( i + 1, j, 0 ) - u( i, j, 0 ) +
                                             v( i, j + 1, 0 ) - v( i, j, 0 ) );
             } );
+
+        // With every wall solid, the pressure matrix is singular with a
+        // constant null space, so the system has a solution only if the
+        // right-hand side has zero mean. Remove the mean that round-off
+        // (or inconsistent wall velocities) leaves behind.
+        bool all_solid = true;
+        for ( int w = 0; w < 4; w++ )
+            all_solid &= _bc.boundary_type[w] == BoundaryType::SOLID;
+        if ( all_solid )
+        {
+            double sum;
+            Kokkos::parallel_reduce(
+                "SumDivergence",
+                createExecutionPolicy( cell_space, ExecutionSpace() ),
+                KOKKOS_LAMBDA( const int i, const int j, double& partial ) {
+                    partial += rhs( i, j, 0 );
+                },
+                sum );
+            MPI_Allreduce( MPI_IN_PLACE, &sum, 1, MPI_DOUBLE, MPI_SUM,
+                           local_grid->globalGrid().comm() );
+            double mean =
+                sum / ( local_grid->globalGrid().globalNumEntity( Cell(), 0 ) *
+                        local_grid->globalGrid().globalNumEntity( Cell(), 1 ) );
+            Kokkos::parallel_for(
+                "RemoveMeanDivergence",
+                createExecutionPolicy( cell_space, ExecutionSpace() ),
+                KOKKOS_LAMBDA( const int i, const int j ) {
+                    rhs( i, j, 0 ) -= mean;
+                } );
+        }
         Kokkos::Profiling::popRegion();
     }
 
@@ -235,9 +266,11 @@ class VelocityCorrector<2, ExecutionSpace, MemorySpace, SparseSolver>
         auto v = _pm->get( FaceJ(), Field::Velocity(), Version::Current() );
         auto p = _lhs->view();
 
-        auto l2g = Cabana::Grid::IndexConversion::createL2G(
-            *( _mesh->localGrid() ), Cell() );
         auto local_grid = _mesh->localGrid();
+        auto l2g_facei =
+            Cabana::Grid::IndexConversion::createL2G( *local_grid, FaceI() );
+        auto l2g_facej =
+            Cabana::Grid::IndexConversion::createL2G( *local_grid, FaceJ() );
         auto iface_space = local_grid->indexSpace( Cabana::Grid::Own(), FaceI(),
                                                    Cabana::Grid::Local() );
         auto jface_space = local_grid->indexSpace( Cabana::Grid::Own(), FaceJ(),
@@ -259,7 +292,7 @@ class VelocityCorrector<2, ExecutionSpace, MemorySpace, SparseSolver>
                 u( i, j, 0 ) -= scale * ( p( i, j, 0 ) - p( i - 1, j, 0 ) );
 
                 int gi, gj;
-                l2g( i, j, gi, gj );
+                l2g_facei( i, j, gi, gj );
                 bc( FaceI(), u, gi, gj, i, j );
             } );
 
@@ -270,8 +303,8 @@ class VelocityCorrector<2, ExecutionSpace, MemorySpace, SparseSolver>
                 v( i, j, 0 ) -= scale * ( p( i, j, 0 ) - p( i, j - 1, 0 ) );
 
                 int gi, gj;
-                l2g( i, j, gi, gj );
-                bc( FaceJ(), u, gi, gj, i, j );
+                l2g_facej( i, j, gi, gj );
+                bc( FaceJ(), v, gi, gj, i, j );
             } );
 
         Kokkos::Profiling::popRegion();

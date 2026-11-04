@@ -7,7 +7,7 @@ include(GNUInstallDirs)
 
 # Be explicit about the C++ version we want.
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIIRED ON)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # find dependencies
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
@@ -41,6 +41,8 @@ if(CabanaFluids_ENABLE_TESTING)
   else()
     message(FATAL_ERROR "bug in GTest find module workaround")
   endif()
+  # Cabana does not export its device list, which the test harness needs
+  set(CABANA_SUPPORTED_DEVICES SERIAL THREADS OPENMP CUDA HIP SYCL OPENMPTARGET)
   set(TEST_HARNESS_DIR ${CMAKE_SOURCE_DIR}/cmake/test_harness)
   include(cmake/test_harness/test_harness.cmake)
   enable_testing()
@@ -49,7 +51,7 @@ endif()
 # enable doxygen
 find_package(Doxygen)
 if(Doxygen_FOUND)
-  doxygen_add_docs(doxygen core/src grid/src)
+  doxygen_add_docs(doxygen src)
 endif()
 
 

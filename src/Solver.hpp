@@ -80,6 +80,7 @@ class Solver<2, ExecutionSpace, MemorySpace> : public SolverBase
         , _source( source )
         , _body( body )
         , _dt( delta_t )
+        , _dt_max( delta_t )
         , _time( 0.0 )
     {
 
@@ -88,21 +89,6 @@ class Solver<2, ExecutionSpace, MemorySpace> : public SolverBase
         _mesh = std::make_shared<Mesh<2, ExecutionSpace, MemorySpace>>(
             global_bounding_box, global_num_cell, partitioner, _halo_min,
             comm );
-
-        // Check that our timestep is small enough to handle the mesh size
-        // given and inflow/body forces under some very simple assumptions.
-        // In the end, the user should give us sane input conditions.
-        auto forcemax = sqrt( body._force[0] * body._force[0] +
-                              body._force[1] * body._force[1] );
-        auto umax =
-            fmax( fabs( source._velocity[0] ), fabs( source._velocity[1] ) ) +
-            sqrt( forcemax * _mesh->cellSize() );
-        if ( ( umax > 0 ) && ( _dt > _mesh->cellSize() / umax ) )
-        {
-            _dt = _mesh->cellSize() / umax;
-            std::cerr << "Reducting timestep to " << _dt
-                      << " given mesh size and inflow velocity.\n";
-        }
 
         // Put domain rane information into the boundary condition object
         _bc.min = _mesh->minDomainGlobalCellIndex();
@@ -133,6 +119,9 @@ class Solver<2, ExecutionSpace, MemorySpace> : public SolverBase
 
     void step() override
     {
+        // Limit the time step to what the current velocity field allows
+        _dt = TimeIntegrator::cflTimeStep( ExecutionSpace(), *_pm, _dt_max );
+
         // 1. Advect the quantities forward a time step in the
         // computed velocity field
         TimeIntegrator::step<2>( ExecutionSpace(), *_pm, _dt, _bc );
@@ -152,7 +141,7 @@ class Solver<2, ExecutionSpace, MemorySpace> : public SolverBase
 
         Kokkos::Profiling::pushRegion( "Solve" );
 
-        _silo->siloWrite( strdup( "Mesh" ), t, _time, _dt );
+        _silo->siloWrite( "Mesh", t, _time, _dt );
         Kokkos::Profiling::popRegion();
 
         num_step = t_final / _dt;
@@ -166,13 +155,13 @@ class Solver<2, ExecutionSpace, MemorySpace> : public SolverBase
                 printf( "Step %d / %d at time = %f\n", t, num_step, _time );
 
             step();
+            t++;
 
             // 4. Output mesh state periodically
             if ( 0 == t % write_freq )
             {
-                _silo->siloWrite( strdup( "Mesh" ), t, _time, _dt );
+                _silo->siloWrite( "Mesh", t, _time, _dt );
             }
-            t++;
         } while ( ( _time < t_final ) );
     }
 
@@ -270,6 +259,7 @@ class Solver<2, ExecutionSpace, MemorySpace> : public SolverBase
     InflowSource<2> _source;
     BodyForce<2> _body;
     double _dt;
+    double _dt_max;
     double _time;
     std::shared_ptr<Mesh<2, ExecutionSpace, MemorySpace>> _mesh;
     std::shared_ptr<ProblemManager<2, ExecutionSpace, MemorySpace>> _pm;
@@ -292,19 +282,21 @@ createSolver( const std::string& device, MPI_Comm comm,
               const std::string& matrix_solver,
               const std::string& preconditioner )
 {
-    if (0 == device.compare( "default" ) )
+    if ( 0 == device.compare( "default" ) )
     {
         return std::make_shared<
-            CabanaFluids::Solver<2, Kokkos::DefaultExecutionSpace, Kokkos::DefaultExecutionSpace::memory_space>>(
+            CabanaFluids::Solver<2, Kokkos::DefaultExecutionSpace,
+                                 Kokkos::DefaultExecutionSpace::memory_space>>(
             comm, global_bounding_box, global_num_cell, partitioner, density,
             create_functor, bc, source, body, delta_t, matrix_solver,
             preconditioner );
-    } 
+    }
     else if ( 0 == device.compare( "serial" ) )
     {
-// Hypre with CUDA or HIP support breaks support for the serial solver. We'll need
-// to set it up to use a different solver in that case
-#if defined( KOKKOS_ENABLE_SERIAL ) && !defined( KOKKOS_ENABLE_CUDA ) && !defined( KOKKOS_ENABLE_HIP )
+// Hypre with CUDA or HIP support breaks support for the serial solver. We'll
+// need to set it up to use a different solver in that case
+#if defined( KOKKOS_ENABLE_SERIAL ) && !defined( KOKKOS_ENABLE_CUDA ) &&       \
+    !defined( KOKKOS_ENABLE_HIP )
         return std::make_shared<
             CabanaFluids::Solver<2, Kokkos::Serial, Kokkos::HostSpace>>(
             comm, global_bounding_box, global_num_cell, partitioner, density,
@@ -316,7 +308,8 @@ createSolver( const std::string& device, MPI_Comm comm,
     }
     else if ( 0 == device.compare( "openmp" ) )
     {
-#if defined( KOKKOS_ENABLE_OPENMP ) && !defined( KOKKOS_ENABLE_CUDA ) && !defined( KOKKOS_ENABLE_HIP )
+#if defined( KOKKOS_ENABLE_OPENMP ) && !defined( KOKKOS_ENABLE_CUDA ) &&       \
+    !defined( KOKKOS_ENABLE_HIP )
         return std::make_shared<
             CabanaFluids::Solver<2, Kokkos::OpenMP, Kokkos::HostSpace>>(
             comm, global_bounding_box, global_num_cell, partitioner, density,
@@ -341,8 +334,8 @@ createSolver( const std::string& device, MPI_Comm comm,
     else if ( 0 == device.compare( "hip" ) )
     {
 #ifdef KOKKOS_ENABLE_HIP
-        return std::make_shared<CabanaFluids::Solver<
-            2, Kokkos::HIP, Kokkos::HIPSpace>>(
+        return std::make_shared<
+            CabanaFluids::Solver<2, Kokkos::HIP, Kokkos::HIPSpace>>(
             comm, global_bounding_box, global_num_cell, partitioner, density,
             create_functor, bc, source, body, delta_t, matrix_solver,
             preconditioner );
