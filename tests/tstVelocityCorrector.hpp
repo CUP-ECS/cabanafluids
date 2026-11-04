@@ -6,6 +6,8 @@
 
 #include <mpi.h>
 
+#include <string>
+
 #include "ProblemManagerFixture.hpp"
 #include "tstDriver.hpp"
 
@@ -14,6 +16,64 @@ using FaceI = Cabana::Grid::Face<Cabana::Grid::Dim::I>;
 using FaceJ = Cabana::Grid::Face<Cabana::Grid::Dim::J>;
 using Velocity = CabanaFluids::Field::Velocity;
 using Current = CabanaFluids::Version::Current;
+
+// Each case pairs the device under test with a pressure solver and its
+// preconditioner, named as createVelocityCorrector takes them
+using TestDevice = DeviceType<TEST_EXECSPACE, TEST_MEMSPACE>;
+struct ReferenceJacobi : TestDevice
+{
+    static constexpr const char* solver = "Reference";
+    static constexpr const char* precon = "Jacobi";
+};
+#ifdef Cabana_ENABLE_HYPRE
+struct PCGDiagonal : TestDevice
+{
+    static constexpr const char* solver = "PCG";
+    static constexpr const char* precon = "Diagonal";
+};
+struct PCGPFMG : TestDevice
+{
+    static constexpr const char* solver = "PCG";
+    static constexpr const char* precon = "PFMG";
+};
+struct GMRESPFMG : TestDevice
+{
+    static constexpr const char* solver = "GMRES";
+    static constexpr const char* precon = "PFMG";
+};
+struct BiCGSTABDiagonal : TestDevice
+{
+    static constexpr const char* solver = "BiCGSTAB";
+    static constexpr const char* precon = "Diagonal";
+};
+struct PFMGNone : TestDevice
+{
+    static constexpr const char* solver = "PFMG";
+    static constexpr const char* precon = "none";
+};
+struct SMGNone : TestDevice
+{
+    static constexpr const char* solver = "SMG";
+    static constexpr const char* precon = "none";
+};
+#endif
+
+#ifdef Cabana_ENABLE_HYPRE
+using SolverCases =
+    ::testing::Types<ReferenceJacobi, PCGDiagonal, PCGPFMG, GMRESPFMG,
+                     BiCGSTABDiagonal, PFMGNone, SMGNone>;
+#else
+using SolverCases = ::testing::Types<ReferenceJacobi>;
+#endif
+
+struct SolverCaseName
+{
+    template <class T>
+    static std::string GetName( int )
+    {
+        return std::string( T::solver ) + T::precon;
+    }
+};
 
 template <class T>
 class VelocityCorrectorTest : public ::testing::Test
@@ -47,12 +107,18 @@ class VelocityCorrectorTest : public ::testing::Test
     template <class Func_t>
     void setU( const Func_t& f )
     {
+        setU( pm_, f );
+    }
+
+    template <class Func_t>
+    void setU( const std::shared_ptr<pm_type>& pm, const Func_t& f )
+    {
         auto local_grid = mesh_->localGrid();
         auto space = local_grid->indexSpace( Cabana::Grid::Own(), FaceI(),
                                              Cabana::Grid::Local() );
         auto l2g =
             Cabana::Grid::IndexConversion::createL2G( *local_grid, FaceI() );
-        auto u = pm_->get( FaceI(), Velocity(), Current() );
+        auto u = pm->get( FaceI(), Velocity(), Current() );
         Kokkos::parallel_for(
             "set u", createExecutionPolicy( space, ExecutionSpace() ),
             KOKKOS_LAMBDA( const int i, const int j ) {
@@ -62,11 +128,14 @@ class VelocityCorrectorTest : public ::testing::Test
             } );
     }
 
-    void correct()
+    void correct() { correct( pm_, T::solver, T::precon ); }
+
+    void correct( const std::shared_ptr<pm_type>& pm, const std::string& solver,
+                  const std::string& precon )
     {
         auto vc = CabanaFluids::createVelocityCorrector<2, ExecutionSpace,
                                                         MemorySpace>(
-            pm_, bc_, 1.0, 0.01, "Reference", "Jacobi" );
+            pm, bc_, 1.0, 0.01, solver, precon );
         vc->correctVelocity();
     }
 
@@ -75,7 +144,7 @@ class VelocityCorrectorTest : public ::testing::Test
     CabanaFluids::BoundaryCondition<2> bc_;
 };
 
-TYPED_TEST_SUITE( VelocityCorrectorTest, MeshDeviceTypes );
+TYPED_TEST_SUITE( VelocityCorrectorTest, SolverCases, SolverCaseName );
 
 // A single nonzero face in the middle of the domain: a divergence dipole
 struct Dipole
@@ -180,4 +249,41 @@ TYPED_TEST( VelocityCorrectorTest, UniformGravityProjectsAway )
     for ( int i = space.min( 0 ); i < space.max( 0 ); i++ )
         for ( int j = space.min( 1 ); j < space.max( 1 ); j++ )
             ASSERT_LT( std::abs( v_host( i, j, 0 ) ), 1.0e-4 * 9.8 * 0.01 );
+}
+
+TYPED_TEST( VelocityCorrectorTest, MatchesReferenceSolve )
+{
+    if ( std::string( TypeParam::solver ) == "Reference" )
+        GTEST_SKIP() << "compares each hypre solver with the reference";
+
+    // Project the same dipole with the reference solver and with this
+    // case's solver. The pressures may differ by a constant, since the
+    // all-solid system is singular, but the corrected velocities may not.
+    using pm_type = typename TestFixture::pm_type;
+    auto ref_pm =
+        std::make_shared<pm_type>( this->mesh_, NullInitFunctor<2>() );
+    this->setU( Dipole{ this->boxCells_ } );
+    this->setU( ref_pm, Dipole{ this->boxCells_ } );
+    this->correct();
+    this->correct( ref_pm, "Reference", "Jacobi" );
+
+    auto local_grid = this->mesh_->localGrid();
+    auto compare = [&]( auto entity )
+    {
+        auto x = Kokkos::create_mirror_view_and_copy(
+            Kokkos::HostSpace(),
+            this->pm_->get( entity, Velocity(), Current() ) );
+        auto ref = Kokkos::create_mirror_view_and_copy(
+            Kokkos::HostSpace(), ref_pm->get( entity, Velocity(), Current() ) );
+        auto space = local_grid->indexSpace( Cabana::Grid::Own(), entity,
+                                             Cabana::Grid::Local() );
+        // The initial velocity peaks at 1 and both solvers stop at a
+        // relative residual of 1e-6, so allow ten times that
+        for ( int i = space.min( 0 ); i < space.max( 0 ); i++ )
+            for ( int j = space.min( 1 ); j < space.max( 1 ); j++ )
+                ASSERT_NEAR( x( i, j, 0 ), ref( i, j, 0 ), 1.0e-5 )
+                    << "local face " << i << ", " << j;
+    };
+    compare( FaceI() );
+    compare( FaceJ() );
 }
