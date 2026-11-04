@@ -1,14 +1,14 @@
 # Session memory
 
 Reasoning worth carrying between agent sessions that belongs in no other
-file. Written 2026-11-01. Verify before acting on it; the files it points
-at win where the two disagree.
+file. Written 2026-11-01, updated 2026-11-03. Verify before acting on
+it; the files it points at win where the two disagree.
 
 ## Current state
 
-- `cabanafluids-cleanup` is rebased onto `develop` as
-  `cabanafluids-cleanup-on-develop`, open as PR #60 against `develop` and
-  awaiting review. `CHANGELOG.md` records what changed and why.
+- `cabanafluids-cleanup` was rebased onto `develop` and merged as PR
+  #60; its branches are deleted. `CHANGELOG.md` records what changed
+  and why.
 - CI runs in `ghcr.io/cup-ecs/cabanafluids-tester:latest`, rebuilt from
   `configs/github/spack.yaml` by PRs #61 and #62 after the old
   `cajitafluids-tester` image broke `actions/checkout`. Pull requests
@@ -17,11 +17,11 @@ at win where the two disagree.
 - The image builds the CUP-ECS Cabana fork's `master` with `+hypre`
   from the `cupecs` repo in COMPASS-PSAAP/spack-packages, because
   upstream Cabana's CMake rejects hypre 3. Local builds use the same
-  fork without hypre, so only CI exercises the hypre solver path.
-- The tests have run only on macOS with Kokkos' Serial backend. OpenMP,
-  CUDA, and HIP builds of the harness are untested.
-- Once PR #60 merges, `origin/cabanafluids-cleanup` and the local backup
-  `cabanafluids-cleanup-pre-rebase` can go; ask before deleting them.
+  fork without hypre, so only CI compiles the hypre solver path, and no
+  test runs it: the `VelocityCorrector` tests ask for `"Reference"`.
+- The tests have run only with Kokkos' Serial backend, on macOS and in
+  CI's Linux container, where all 18 pass. OpenMP, CUDA, and HIP builds
+  of the harness are untested.
 
 ## Design decisions
 
@@ -66,4 +66,7 @@ at win where the two disagree.
 - `VelocityCorrector` caps CG at `10 * sqrt(ncells)` iterations, from
   `develop`. It suffices for the 64x64 test mesh; nobody has checked it
   at production sizes or with HYPRE solvers.
+- A `VelocityCorrector` test that selects a hypre solver would exercise
+  the hypre path in CI; it needs `Cabana_ENABLE_HYPRE` guards, since
+  local builds lack hypre.
 - `FUTURE.md` holds the remaining test plan and the advection rewrite.
