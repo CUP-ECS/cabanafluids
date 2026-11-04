@@ -1,12 +1,20 @@
-# Spack environment specification for code needed to run CajitaFluids on CUDA 
-# systems with clang, so we don't we need the nvcc wrapper. Need to modify 
-# the cuda_arch flag to support the right system
+# Spack environment specification for code needed to run CabanaFluids on CUDA
+# systems with clang, so we don't we need the nvcc wrapper. Need to modify
+# the cuda_arch flag in every spec to support the right system; 70 is Volta.
 spack:
   specs:
   - hdf5+mpi
-  - silo@4.11
-  - hypre-cmake +cuda cuda_arch=70
-  - kokkos +cuda +cuda_lambda cuda_arch=70 std=17 %clang
-  - cabana +hypre +mpi %clang
-  concretization: together
+  - silo@4.12
+  - hypre +mpi +cuda cuda_arch=70
+  - kokkos@4 +cuda +cuda_lambda cuda_arch=70 cxxstd=17 %clang # Kokkos 5 requires C++20
+  - cupecs.cabana@master +grid +hypre +mpi +cuda cuda_arch=70 %clang # Upstream rejects hypre 3
+  concretizer:
+    unify: true
   view: true
+
+  # Upstream Cabana's CMake asks for hypre 2.22.1 and rejects hypre 3, which
+  # Spack pairs with Cabana 0.8; the CUP-ECS fork and its package accept it
+  repos:
+    cupecs:
+      git: https://github.com/COMPASS-PSAAP/spack-packages.git
+      paths: [spack_pkgs/spack_repo/cupecs]

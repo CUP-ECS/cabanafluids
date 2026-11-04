@@ -62,7 +62,7 @@ lives at `CUP-ECS/CabanaFluids`, and no other repository owns its specification.
 | `src/` | The header-mostly `cabanafluids` library: mesh, problem manager, boundary conditions, time integration, pressure projection, and Silo output |
 | `tests/` | GoogleTest unit tests, one `tst<Name>.hpp` per suite, each built per Kokkos backend and registered with CTest at 1, 2, and 4 MPI ranks |
 | `examples/` | The `advection` driver and its command-line options |
-| `configs/` | Spack environments and the CMake host config for CI, Lassen, generic CUDA systems, and macOS |
+| `configs/` | Spack environments and the CMake host config for CI, generic CUDA systems, class tutorials, and macOS |
 
 ## Repository configuration
 
