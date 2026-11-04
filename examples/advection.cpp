@@ -37,7 +37,7 @@
 using namespace CabanaFluids;
 
 // Short Args: n - Cell Count, s - Domain Size,
-// x - On-node Parallelism ( Serial/Threaded/OpenMP/CUDA ),
+// p - On-node Parallelism ( Serial/Threads/OpenMP/CUDA/HIP ),
 // t - Time Steps, f - Write Frequency
 // d - Input Density, i - Input Location, v - Inflow Velocity
 static char* shortargs = (char*)"n:s:t:i:f:d:g:p:m:c:x:y:w:h:q:u:v:";
@@ -105,7 +105,8 @@ void help( const int rank, char* progname )
     {
         std::cout << "Usage: " << progname << "\n";
         std::cout << std::left << std::setw( 10 ) << "-p" << std::setw( 40 )
-                  << "On-node Parallelism Model (default \"default\")"
+                  << "On-node Parallelism Model: default, serial, threads, "
+                     "openmp, cuda, or hip (default \"default\")"
                   << std::left << "\n";
         std::cout << std::left << std::setw( 10 ) << "-s" << std::setw( 40 )
                   << "Size of domain (default 1.0)" << std::left << "\n";
@@ -270,6 +271,7 @@ int parseInput( const int rank, const int argc, char** argv, ClArgs& cl )
             cl.device = strdup( optarg );
             if ( ( cl.device.compare( "default" ) != 0 ) &&
                  ( cl.device.compare( "serial" ) != 0 ) &&
+                 ( cl.device.compare( "threads" ) != 0 ) &&
                  ( cl.device.compare( "cuda" ) != 0 ) &&
                  ( cl.device.compare( "hip" ) != 0 ) &&
                  ( cl.device.compare( "openmp" ) != 0 ) )

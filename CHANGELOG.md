@@ -2,6 +2,15 @@
 
 Newest first.
 
+**2026-11-04 — the example runs on Kokkos' Threads backend.** The unit tests
+already built for Threads, but `createSolver` rejected `-p threads` as an
+invalid backend, so the example could not run on it. It now builds a
+`Kokkos::Threads` solver under the same guards as `serial` and `openmp`, and
+`tstSolver` checks that it does. The `-p` help text and `README.md` list the
+backend names, and `README.md` now gives the real default, `default`, which
+picks Kokkos' default execution space and so runs Threads in a build that
+enables it.
+
 **2026-11-01 — rebased onto `develop` and its test harness.** `develop`
 replaced BLT with plain CMake and Cabana's test harness, as this branch had
 done separately; the rebase keeps `develop`'s build. The harness registered no
