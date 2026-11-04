@@ -12,7 +12,10 @@ through as (i, j), so the wall entries of the pressure matrix landed on the
 wrong neighbors. `VelocityCorrector` now swaps the offsets for hypre until
 Cabana does. Hypre's `Jacobi` preconditioner stalls `PCG` and `GMRES` on the
 all-solid test system, and `GMRES`/`Diagonal` reaches the `10 * sqrt(ncells)`
-iteration cap, so the tests use the pairs above. The example and the test main
+iteration cap, so the tests use the pairs above. When the example names a
+hypre solver without `-c`, `createVelocityCorrector` now picks `PFMG` for the
+Krylov solvers and none for `PFMG` and `SMG`; `-c` still wins, and the default
+solver stays `Reference` with `Jacobi`. The example and the test main
 now initialize hypre once after `MPI_Init` and finalize it before
 `MPI_Finalize`; each hypre corrector used to initialize it, and nothing
 finalized it.

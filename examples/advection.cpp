@@ -123,7 +123,10 @@ void help( const int rank, char* progname )
         std::cout << std::left << std::setw( 10 ) << "-m" << std::setw( 40 )
                   << "Matrix Solver (default Reference)" << std::left << "\n";
         std::cout << std::left << std::setw( 10 ) << "-c" << std::setw( 40 )
-                  << "Preconditioner (default Jacobi)" << std::left << "\n";
+                  << "Preconditioner (default Jacobi for Reference, PFMG "
+                     "for hypre PCG, GMRES, and BiCGSTAB, none for PFMG and "
+                     "SMG)"
+                  << std::left << "\n";
 
         // Inflow Source Arguments
         std::cout << std::left << std::setw( 10 ) << "-x" << std::setw( 40 )
@@ -181,9 +184,10 @@ int parseInput( const int rank, const int argc, char** argv, ClArgs& cl )
     cl.gravity = 0.0;
 
     // Default to Cabana's built-in reference conjugate gradient solver with
-    // a simple jacobi preconditioner
+    // a simple jacobi preconditioner. An empty preconditioner lets
+    // createVelocityCorrector pick the one that suits the chosen solver.
     cl.solver = "Reference";
-    cl.precon = "Jacobi";
+    cl.precon = "";
 
     int ch;
     // Now parse any arguments

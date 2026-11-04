@@ -375,7 +375,7 @@ createVelocityCorrector( const std::shared_ptr<ProblemManagerType>& pm,
         auto ps =
             Cabana::Grid::createReferenceConjugateGradient<double, MemorySpace>(
                 *vector_layout );
-        if ( ( precon.compare( "Jacobi" ) != 0 ) &&
+        if ( !precon.empty() && ( precon.compare( "Jacobi" ) != 0 ) &&
              ( precon.compare( "Diagonal" ) != 0 ) )
         {
             std::cerr << "Reference solver supports only Jacobi preconditioner."
@@ -394,6 +394,11 @@ createVelocityCorrector( const std::shared_ptr<ProblemManagerType>& pm,
         auto ps =
             Cabana::Grid::createHypreStructuredSolver<double, MemorySpace>(
                 solver, *vector_layout );
+        // With no preconditioner named, the multigrid solvers run alone and
+        // the Krylov solvers use PFMG; hypre's Jacobi stalls PCG and GMRES
+        // on the singular all-solid system
+        if ( precon.empty() )
+            precon = ( solver == "PFMG" || solver == "SMG" ) ? "none" : "PFMG";
         if ( precon.compare( "None" ) != 0 && precon.compare( "none" ) != 0 )
         {
             auto preconditioner =

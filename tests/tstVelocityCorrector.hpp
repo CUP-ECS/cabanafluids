@@ -139,6 +139,41 @@ class VelocityCorrectorTest : public ::testing::Test
         vc->correctVelocity();
     }
 
+    // Project the same field with the reference solver and with this case's
+    // solver and the given preconditioner. The pressures may differ by a
+    // constant, since the all-solid system is singular, but the corrected
+    // velocities may not.
+    template <class Func_t>
+    void matchReference( const Func_t& f, const std::string& precon )
+    {
+        auto ref_pm = std::make_shared<pm_type>( mesh_, NullInitFunctor<2>() );
+        setU( f );
+        setU( ref_pm, f );
+        correct( pm_, T::solver, precon );
+        correct( ref_pm, "Reference", "Jacobi" );
+
+        auto local_grid = mesh_->localGrid();
+        auto compare = [&]( auto entity )
+        {
+            auto x = Kokkos::create_mirror_view_and_copy(
+                Kokkos::HostSpace(),
+                pm_->get( entity, Velocity(), Current() ) );
+            auto ref = Kokkos::create_mirror_view_and_copy(
+                Kokkos::HostSpace(),
+                ref_pm->get( entity, Velocity(), Current() ) );
+            auto space = local_grid->indexSpace( Cabana::Grid::Own(), entity,
+                                                 Cabana::Grid::Local() );
+            // The initial velocity peaks at 1 and both solvers stop at a
+            // relative residual of 1e-6, so allow ten times that
+            for ( int i = space.min( 0 ); i < space.max( 0 ); i++ )
+                for ( int j = space.min( 1 ); j < space.max( 1 ); j++ )
+                    ASSERT_NEAR( x( i, j, 0 ), ref( i, j, 0 ), 1.0e-5 )
+                        << "local face " << i << ", " << j;
+        };
+        compare( FaceI() );
+        compare( FaceJ() );
+    }
+
     std::shared_ptr<mesh_type> mesh_;
     std::shared_ptr<pm_type> pm_;
     CabanaFluids::BoundaryCondition<2> bc_;
@@ -256,34 +291,12 @@ TYPED_TEST( VelocityCorrectorTest, MatchesReferenceSolve )
     if ( std::string( TypeParam::solver ) == "Reference" )
         GTEST_SKIP() << "compares each hypre solver with the reference";
 
-    // Project the same dipole with the reference solver and with this
-    // case's solver. The pressures may differ by a constant, since the
-    // all-solid system is singular, but the corrected velocities may not.
-    using pm_type = typename TestFixture::pm_type;
-    auto ref_pm =
-        std::make_shared<pm_type>( this->mesh_, NullInitFunctor<2>() );
-    this->setU( Dipole{ this->boxCells_ } );
-    this->setU( ref_pm, Dipole{ this->boxCells_ } );
-    this->correct();
-    this->correct( ref_pm, "Reference", "Jacobi" );
+    this->matchReference( Dipole{ this->boxCells_ }, TypeParam::precon );
+}
 
-    auto local_grid = this->mesh_->localGrid();
-    auto compare = [&]( auto entity )
-    {
-        auto x = Kokkos::create_mirror_view_and_copy(
-            Kokkos::HostSpace(),
-            this->pm_->get( entity, Velocity(), Current() ) );
-        auto ref = Kokkos::create_mirror_view_and_copy(
-            Kokkos::HostSpace(), ref_pm->get( entity, Velocity(), Current() ) );
-        auto space = local_grid->indexSpace( Cabana::Grid::Own(), entity,
-                                             Cabana::Grid::Local() );
-        // The initial velocity peaks at 1 and both solvers stop at a
-        // relative residual of 1e-6, so allow ten times that
-        for ( int i = space.min( 0 ); i < space.max( 0 ); i++ )
-            for ( int j = space.min( 1 ); j < space.max( 1 ); j++ )
-                ASSERT_NEAR( x( i, j, 0 ), ref( i, j, 0 ), 1.0e-5 )
-                    << "local face " << i << ", " << j;
-    };
-    compare( FaceI() );
-    compare( FaceJ() );
+TYPED_TEST( VelocityCorrectorTest, DefaultPreconditionerMatchesReference )
+{
+    // An empty preconditioner asks createVelocityCorrector for the one that
+    // suits the solver, which must converge to the reference solution
+    this->matchReference( Dipole{ this->boxCells_ }, "" );
 }
