@@ -180,8 +180,8 @@ int parseInput( const int rank, const int argc, char** argv, ClArgs& cl )
     cl.density = 0.1;
     cl.gravity = 0.0;
 
-    // Default to the Hypre conjugate gradient solver with a simple
-    // jacobi preconditioner
+    // Default to Cabana's built-in reference conjugate gradient solver with
+    // a simple jacobi preconditioner
     cl.solver = "Reference";
     cl.precon = "Jacobi";
 
@@ -475,6 +475,9 @@ int main( int argc, char* argv[] )
 {
     MPI_Init( &argc, &argv );         // Initialize MPI
     Kokkos::initialize( argc, argv ); // Initialize Kokkos
+#ifdef Cabana_ENABLE_HYPRE
+    HYPRE_Init(); // Initialize hypre once, before any solver uses it
+#endif
 
     // MPI Info
     int comm_size, rank;
@@ -524,6 +527,9 @@ int main( int argc, char* argv[] )
     // Call advection solver
     advect( cl );
 
+#ifdef Cabana_ENABLE_HYPRE
+    HYPRE_Finalize(); // Finalize hypre after every solver is destroyed
+#endif
     Kokkos::finalize(); // Finalize Kokkos
     MPI_Finalize();     // Finalize MPI
 

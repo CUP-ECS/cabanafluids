@@ -380,7 +380,8 @@ createVelocityCorrector( const std::shared_ptr<ProblemManagerType>& pm,
     else
     {
 #ifdef Cabana_ENABLE_HYPRE
-        HYPRE_Init(); // Cabana requires we explicitly init HYPRE here.
+        // Cabana requires hypre to be initialized explicitly; main does it
+        // once, after MPI_Init, and finalizes it before MPI_Finalize.
         auto ps =
             Cabana::Grid::createHypreStructuredSolver<double, MemorySpace>(
                 solver, *vector_layout );
