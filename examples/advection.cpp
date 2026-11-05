@@ -124,7 +124,10 @@ void help( const int rank, char* progname )
         std::cout << std::left << std::setw( 10 ) << "-m" << std::setw( 40 )
                   << "Matrix Solver (default Reference)" << std::left << "\n";
         std::cout << std::left << std::setw( 10 ) << "-c" << std::setw( 40 )
-                  << "Preconditioner (default Jacobi)" << std::left << "\n";
+                  << "Preconditioner (default Jacobi for Reference, PFMG "
+                     "for hypre PCG, GMRES, and BiCGSTAB, none for PFMG and "
+                     "SMG)"
+                  << std::left << "\n";
 
         // Inflow Source Arguments
         std::cout << std::left << std::setw( 10 ) << "-x" << std::setw( 40 )
@@ -181,10 +184,11 @@ int parseInput( const int rank, const int argc, char** argv, ClArgs& cl )
     cl.density = 0.1;
     cl.gravity = 0.0;
 
-    // Default to the Hypre conjugate gradient solver with a simple
-    // jacobi preconditioner
+    // Default to Cabana's built-in reference conjugate gradient solver with
+    // a simple jacobi preconditioner. An empty preconditioner lets
+    // createVelocityCorrector pick the one that suits the chosen solver.
     cl.solver = "Reference";
-    cl.precon = "Jacobi";
+    cl.precon = "";
 
     int ch;
     // Now parse any arguments
@@ -477,6 +481,9 @@ int main( int argc, char* argv[] )
 {
     MPI_Init( &argc, &argv );         // Initialize MPI
     Kokkos::initialize( argc, argv ); // Initialize Kokkos
+#ifdef Cabana_ENABLE_HYPRE
+    HYPRE_Init(); // Initialize hypre once, before any solver uses it
+#endif
 
     // MPI Info
     int comm_size, rank;
@@ -526,6 +533,9 @@ int main( int argc, char* argv[] )
     // Call advection solver
     advect( cl );
 
+#ifdef Cabana_ENABLE_HYPRE
+    HYPRE_Finalize(); // Finalize hypre after every solver is destroyed
+#endif
     Kokkos::finalize(); // Finalize Kokkos
     MPI_Finalize();     // Finalize MPI
 
