@@ -20,6 +20,13 @@ now initialize hypre once after `MPI_Init` and finalize it before
 `MPI_Finalize`; each hypre corrector used to initialize it, and nothing
 finalized it.
 
+**2026-11-04 — CI's image builds for a portable target.** Spack built each
+image for the CPU of whichever runner built it: `zen2` for the old image and
+`x86_64_v4`, which uses AVX-512, for the one PR #75 published. Test runners
+without AVX-512 then crashed in the image's own `tar` during checkout, so no CI
+job could build. `configs/github/spack.yaml` now requires `target=x86_64_v3`,
+which every current GitHub-hosted x86 runner supports.
+
 **2026-11-04 — CI's image pins the fixed Cabana.** The CUP-ECS Cabana fork
 gave hypre its grid in reversed axis order but its stencil offsets unchanged,
 so every hypre solver solved a system with i and j neighbors swapped; its PR

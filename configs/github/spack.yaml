@@ -17,6 +17,12 @@ spack:
     unify: true
   view: true
 
+  # Build for a portable x86 target; Spack otherwise targets whatever CPU
+  # builds the image, and an AVX-512 build crashes on test runners without it
+  packages:
+    all:
+      require: target=x86_64_v3
+
   # Upstream Cabana's CMake asks for hypre 2.22.1 and rejects hypre 3, which
   # Spack pairs with Cabana 0.8; the CUP-ECS fork and its package accept it
   repos:
