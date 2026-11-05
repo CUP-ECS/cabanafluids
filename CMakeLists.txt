@@ -1,7 +1,7 @@
 # project settings
 cmake_minimum_required(VERSION 3.18)
 
-project(CabanaFluids LANGUAGES C CXX VERSION 0.2.0)
+project(CabanaFluids LANGUAGES C CXX VERSION 0.9.0)
 
 include(GNUInstallDirs)
 

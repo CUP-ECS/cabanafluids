@@ -30,12 +30,19 @@ Sources:
 
 ## Building and Testing
 
-CabanaFluids requires CMake 3.18 or later, a C++17 compiler, MPI, Cabana
-built with MPI and grid support, and Silo. HYPRE is optional; configure
-with `-DCabanaFluids_REQUIRE_HYPRE=ON` to fail when Cabana lacks it. The unit
-tests need GoogleTest; configure with `-DCabanaFluids_ENABLE_TESTING=OFF`
-to skip them.
-The `configs` directory holds Spack environments for several systems.
+CabanaFluids requires CMake 3.18 or later, a C++17 compiler, MPI, Kokkos 4,
+Cabana built with MPI and grid support, and Silo. It builds against the
+CUP-ECS fork of Cabana (`CUP-ECS/Cabana`), packaged in the `cupecs` Spack
+repository in `COMPASS-PSAAP/spack-packages`: upstream Cabana rejects hypre 3
+and passes hypre its stencil in the wrong axis order. HYPRE is optional;
+configure with `-DCabanaFluids_REQUIRE_HYPRE=ON` to fail when Cabana lacks it.
+The unit tests need GoogleTest; configure with
+`-DCabanaFluids_ENABLE_TESTING=OFF` to skip them.
+
+The `configs` directory holds Spack environments: `github` for CI's
+container, `tutorial` and `tutorial-cuda` for class tutorials on CPUs and
+NVIDIA GPUs, and `generic` for other CUDA systems. The CUDA environments
+have not been concretized on a CUDA machine yet.
 
 ```
 cmake -B build
@@ -46,7 +53,9 @@ ctest --test-dir build
 CTest runs each test suite at 1, 2, and 4 MPI ranks on every enabled Kokkos
 backend. Set
 `MPIEXEC_PREFLAGS` if your MPI needs extra arguments, as
-`configs/github/host-config.cmake` does for OpenMPI in CI.
+`configs/github/host-config.cmake` does for OpenMPI in CI. The tests have run
+on Kokkos' Serial and Threads backends; OpenMP, CUDA, and HIP builds are
+untested.
 
 ## Running
 
@@ -69,7 +78,8 @@ Without `-c`, the Krylov solvers use the `PFMG` preconditioner and `PFMG` and
 `Jacobi` preconditioner stalls `PCG` and `GMRES` on the all-solid pressure
 system.
 
-The solver writes Silo files every `-f` steps for viewing in VisIt.
+The solver writes Silo files every `-f` steps for viewing in VisIt, under
+`data/` in the working directory, which it creates if needed.
 
 ## Status and Future Work
 
