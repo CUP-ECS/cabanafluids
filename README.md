@@ -63,6 +63,12 @@ options:
 | `-f` | Output frequency in steps | 20 |
 | `-m`, `-c` | Pressure solver and preconditioner | `Reference`, `Jacobi` |
 
+With hypre, `-m` also accepts `PCG`, `GMRES`, `BiCGSTAB`, `PFMG`, and `SMG`.
+Without `-c`, the Krylov solvers use the `PFMG` preconditioner and `PFMG` and
+`SMG` run alone (`none`). An explicit `-c` overrides this choice. Hypre's
+`Jacobi` preconditioner stalls `PCG` and `GMRES` on the all-solid pressure
+system.
+
 The solver writes Silo files every `-f` steps for viewing in VisIt.
 
 ## Status and Future Work

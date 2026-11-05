@@ -2,6 +2,24 @@
 
 Newest first.
 
+**2026-11-04 — tested the hypre solvers and fixed their stencil.** No test had
+run the hypre pressure solve. `tstVelocityCorrector` now runs every case with
+`Reference`/`Jacobi` and, when Cabana has hypre, with hypre's `PCG`/`Diagonal`,
+`PCG`/`PFMG`, `GMRES`/`PFMG`, `BiCGSTAB`/`Diagonal`, `PFMG`, and `SMG`, and
+checks that each hypre solve matches the reference one. Every hypre solver
+failed: Cabana gives hypre the grid in (j, i) order but passes stencil offsets
+through as (i, j), so the wall entries of the pressure matrix landed on the
+wrong neighbors. CUP-ECS/Cabana PR #51 fixes this in the Cabana fork that
+CabanaFluids builds against, and CI's image pins that fix. Hypre's `Jacobi` preconditioner stalls `PCG` and `GMRES` on the
+all-solid test system, and `GMRES`/`Diagonal` reaches the `10 * sqrt(ncells)`
+iteration cap, so the tests use the pairs above. When the example names a
+hypre solver without `-c`, `createVelocityCorrector` now picks `PFMG` for the
+Krylov solvers and none for `PFMG` and `SMG`; `-c` still wins, and the default
+solver stays `Reference` with `Jacobi`. The example and the test main
+now initialize hypre once after `MPI_Init` and finalize it before
+`MPI_Finalize`; each hypre corrector used to initialize it, and nothing
+finalized it.
+
 **2026-11-04 — CI's image builds for a portable target.** Spack built each
 image for the CPU of whichever runner built it: `zen2` for the old image and
 `x86_64_v4`, which uses AVX-512, for the one PR #75 published. Test runners

@@ -11,7 +11,12 @@
 
 #include <gtest/gtest.h>
 
+#include <Cabana_Grid_Config.hpp>
 #include <Kokkos_Core.hpp>
+
+#ifdef Cabana_ENABLE_HYPRE
+#include <HYPRE_utilities.h>
+#endif
 
 #include <mpi.h>
 
@@ -19,8 +24,14 @@ int main( int argc, char* argv[] )
 {
     MPI_Init( &argc, &argv );
     Kokkos::initialize( argc, argv );
+#ifdef Cabana_ENABLE_HYPRE
+    HYPRE_Init();
+#endif
     ::testing::InitGoogleTest( &argc, argv );
     int return_val = RUN_ALL_TESTS();
+#ifdef Cabana_ENABLE_HYPRE
+    HYPRE_Finalize();
+#endif
     Kokkos::finalize();
     MPI_Finalize();
     return return_val;
