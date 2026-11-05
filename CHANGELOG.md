@@ -2,6 +2,19 @@
 
 Newest first.
 
+**2026-11-04 — release 0.9.0.** The first tagged release, and the first
+merge of `develop` into `main` since 2022. The version stays below 1.0
+because CabanaFluids depends on the CUP-ECS fork of Cabana rather than
+upstream Cabana: upstream rejects hypre 3 and passes hypre its stencil in
+the wrong axis order, which the fork fixes. Since `main` last moved, the
+solver's numerics were reviewed and corrected, the build moved to plain CMake
+with Cabana's test harness, every suite runs at 1, 2, and 4 ranks, the hypre
+pressure solvers are tested against the reference solver, the example runs on
+Kokkos' Threads backend, its Silo output records the right time and creates
+its directories, and the Spack environments cover CI, tutorials, and CUDA
+systems. The entries below give the details. Semi-Lagrangian advection still
+diffuses the advected quantity; `FUTURE.md` records the plan to replace it.
+
 **2026-11-04 — CI's image takes its build tools from Ubuntu.** Most of the 64
 packages Spack built for the image were tools and their dependencies, such as
 CMake, Git, Perl, Python, OpenSSL, and OpenSSH, and Spack's builds of `git`

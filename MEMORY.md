@@ -6,11 +6,11 @@ it; the files it points at win where the two disagree.
 
 ## Current state
 
-- 2026-11-04: work toward the first release follows Section 0 of
-  `FUTURE.md`, which records each step's status and pull request. Steps
-  run in parallel on separate branches from `develop`, so their
-  `CHANGELOG.md` entries conflict at the top as they merge. Issue #54
-  and the numerics wait until after the release.
+- 2026-11-04: release 0.9.0 is being prepared on `prepare-0.9.0`;
+  every other step of Section 0 of `FUTURE.md` is merged. After the
+  release: pin the tutorial environments to it, then issue #54 and the
+  numerics. Parallel branches from `develop` conflict at the top of
+  `CHANGELOG.md` as they merge; merge `develop` in rather than rebase.
 
 - `cabanafluids-cleanup` was rebased onto `develop` and merged as PR
   #60; its branches are deleted. `CHANGELOG.md` records what changed
@@ -19,7 +19,17 @@ it; the files it points at win where the two disagree.
   `configs/github/spack.yaml` by PRs #61 and #62 after the old
   `cajitafluids-tester` image broke `actions/checkout`. Pull requests
   only build the image; a push to `develop` publishes it, which takes
-  about an hour. Changing the workflow or the image needs a human.
+  about 20 minutes since PR #77 took the build tools, `git`, `tar`, and
+  `openssh` from Ubuntu. Changing the workflow or the image needs a
+  human. A pull request's test jobs run in the published image, so an
+  image change shows its effect only after merge.
+- The image's Spack packages require `target=x86_64_v3`. Without it,
+  Spack targets whichever CPU builds the image; PR #75's rebuild came
+  out `x86_64_v4` and crashed in `tar` on runners without AVX-512.
+- The image pins the Cabana fork to a commit, since it rebuilds only
+  when `configs/github/spack.yaml` changes. Change the pin to pick up a
+  Cabana fix, and merge CabanaFluids changes that need it only after the
+  new image is published.
 - The image builds the CUP-ECS Cabana fork's `master` with `+hypre`
   from the `cupecs` repo in COMPASS-PSAAP/spack-packages, because
   upstream Cabana's CMake rejects hypre 3. Since 2026-11-04 the local
@@ -82,6 +92,8 @@ it; the files it points at win where the two disagree.
   Threads, because Apple Clang lacks OpenMP; Lassen and Quartz are
   retired, so their configurations go; a tutorial Spack environment
   replaces the UAO one from `main`.
+- Decided 2026-11-04: the release is 0.9.0, below 1.0 because it
+  depends on the CUP-ECS Cabana fork, not upstream Cabana.
 - Decided 2026-11-04, later: Cabana bugs are fixed in the CUP-ECS fork,
   which every configuration uses, and the author upstreams them; the
   hypre default preconditioner changes; CI's configure requires hypre;
