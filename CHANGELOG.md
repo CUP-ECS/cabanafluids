@@ -9,7 +9,8 @@ targeted the wrong CPU. `configs/github/spack.yaml` now declares Ubuntu 24.04's
 packages for those tools, their compression and terminal libraries, and
 GoogleTest as Spack externals, so apt's generic x86-64 builds serve them. Spack
 still builds OpenMPI, HDF5, Silo, hypre, Kokkos, and Cabana, so their versions
-keep matching local environments. `git` and `cmake` are no longer roots of the
+keep matching local environments, and zlib, because `pmix` cannot find
+Ubuntu's. `git` and `cmake` are no longer roots of the
 environment, since Spack does not link externals into the view; CI's `PATH`
 finds Ubuntu's copies in `/usr/bin`.
 
