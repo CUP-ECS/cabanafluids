@@ -110,11 +110,13 @@ request into `develop`; `prepare-release` carried this plan. Status as of
     in `CHANGELOG.md`, then open the pull request from `develop` into
     `main`. Merging, tagging, publishing the GitHub release, and adding
     the release to the `cabanafluids` package in the `cupecs` Spack repo
-    are a human's steps. *In progress: the release is 0.9.0, below 1.0
-    because it depends on the CUP-ECS Cabana fork.* Once that package has
+    are a human's steps. Once that package has
     the release, change
     `cabanafluids@develop` in `configs/tutorial/` and
-    `configs/tutorial-cuda/` to the release.
+    `configs/tutorial-cuda/` to the release. *Done in PRs #78 and #79,
+    tagged `v0.9.0`, below 1.0 because it depends on the CUP-ECS Cabana
+    fork. COMPASS-PSAAP/spack-packages PR #8 added it to the package, and
+    PR #80 pins the tutorial environments to it.*
 
 ## 1. Known Bugs
 

@@ -16,7 +16,7 @@ spack:
   - hypre +mpi # Make sure we get an mpi version of hypre
   - kokkos@4 +serial +threads cxxstd=17 # Kokkos 5 requires C++20
   - cupecs.cabana@master +grid +hypre +mpi +serial +threads # Upstream rejects hypre 3
-  - cabanafluids@develop +hypre
+  - cabanafluids@0.9.0 +hypre
   concretizer:
     unify: true
   view: true

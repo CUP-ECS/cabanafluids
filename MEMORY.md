@@ -1,16 +1,18 @@
 # Session memory
 
 Reasoning worth carrying between agent sessions that belongs in no other
-file. Written 2026-11-01, updated 2026-11-04. Verify before acting on
+file. Written 2026-11-01, updated 2026-11-05. Verify before acting on
 it; the files it points at win where the two disagree.
 
 ## Current state
 
-- 2026-11-04: release 0.9.0 is being prepared on `prepare-0.9.0`;
-  every other step of Section 0 of `FUTURE.md` is merged. After the
-  release: pin the tutorial environments to it, then issue #54 and the
-  numerics. Parallel branches from `develop` conflict at the top of
-  `CHANGELOG.md` as they merge; merge `develop` in rather than rebase.
+- 2026-11-05: release 0.9.0 is merged into `main` and tagged
+  `v0.9.0`, the `cupecs` Spack repo's `cabanafluids` package has it,
+  and the tutorial environments pin it. Section 0 of `FUTURE.md` is
+  done except publishing the GitHub release, a human's step. Next:
+  issue #54 and the numerics. Parallel branches from `develop` conflict
+  at the top of `CHANGELOG.md` as they merge; merge `develop` in rather
+  than rebase.
 
 - `cabanafluids-cleanup` was rebased onto `develop` and merged as PR
   #60; its branches are deleted. `CHANGELOG.md` records what changed
