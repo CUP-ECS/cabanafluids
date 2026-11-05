@@ -2,6 +2,12 @@
 
 Newest first.
 
+**2026-11-05 — the tutorial environments pin release 0.9.0.**
+`configs/tutorial/` and `configs/tutorial-cuda/` built `cabanafluids@develop`
+until a release existed. The `cupecs` Spack repo's `cabanafluids` package now
+has 0.9.0, pinned to its tag and commit, so a class builds the same code each
+time it sets up.
+
 **2026-11-04 — release 0.9.0.** The first tagged release, and the first
 merge of `develop` into `main` since 2022. The version stays below 1.0
 because CabanaFluids depends on the CUP-ECS fork of Cabana rather than
