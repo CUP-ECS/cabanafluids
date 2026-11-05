@@ -4,22 +4,26 @@
  * @author Jered Dominguez-Trujillo <jereddt@unm.edu>
  *
  * @section DESCRIPTION
- * Boundary Conditions for ExaCLAMR Shallow Water Solver
+ * Boundary Conditions for CabanaFluids advection solver
  */
 
-#ifndef EXACLAMR_BOUNDARYCONDITIONS_HPP
-#define EXACLAMR_BOUNDARYCONDITIONS_HPP
+#ifndef CABANAFLUIDS_BOUNDARYCONDITIONS_HPP
+#define CABANAFLUIDS_BOUNDARYCONDITIONS_HPP
 
 #ifndef DEBUG
 #define DEBUG 0
 #endif
 
 // Include Statements
-#include <Mesh.hpp>
-
+#include <Cabana_Core.hpp>
+#include <Cabana_Grid.hpp>
 #include <Kokkos_Core.hpp>
 
-namespace CajitaFluids
+#include <Mesh.hpp>
+
+#include <type_traits>
+
+namespace CabanaFluids
 {
 /**
  * @struct BoundaryType
@@ -50,9 +54,9 @@ struct BoundaryCondition;
 template <>
 struct BoundaryCondition<2>
 {
-    using Cell = Cajita::Cell;
-    using FaceI = Cajita::Face<Cajita::Dim::I>;
-    using FaceJ = Cajita::Face<Cajita::Dim::J>;
+    using Cell = Cabana::Grid::Cell;
+    using FaceI = Cabana::Grid::Face<Cabana::Grid::Dim::I>;
+    using FaceJ = Cabana::Grid::Face<Cabana::Grid::Dim::J>;
     template <class ArrayType>
     KOKKOS_INLINE_FUNCTION void
     build_matrix( const int gi, const int gj, const int i, const int j,
@@ -128,12 +132,71 @@ struct BoundaryCondition<2>
         }
     }
 
+    // Halo gathers fill only the ghosts shared with other ranks. Fill the
+    // ghosts outside the physical domain by reflecting the field across each
+    // wall. Velocity normal to a solid wall is odd about the wall, so it
+    // interpolates to zero there; every other value is even.
+    template <class ExecutionSpace, class LocalGrid_t, class Entity_t,
+              class View_t>
+    void fillGhosts( const ExecutionSpace& exec_space,
+                     const LocalGrid_t& local_grid, Entity_t entity,
+                     const View_t& field ) const
+    {
+        auto ghost_space = local_grid.indexSpace( Cabana::Grid::Ghost(), entity,
+                                                  Cabana::Grid::Local() );
+        auto l2g =
+            Cabana::Grid::IndexConversion::createL2G( local_grid, entity );
+        const bool face_aligned[2] = { std::is_same<Entity_t, FaceI>::value,
+                                       std::is_same<Entity_t, FaceJ>::value };
+
+        // Fill one dimension at a time so corner ghosts reflect across both
+        // walls
+        for ( int d = 0; d < 2; d++ )
+        {
+            // Face-aligned entities mirror about the wall face; others mirror
+            // about the wall between the first cell and its ghost
+            int offset = face_aligned[d] ? 1 : 0;
+            int lo = min[d], hi = max[d] + offset;
+            int lo_mirror = 2 * min[d] - 1 + offset;
+            int hi_mirror = 2 * max[d] + 1 + offset;
+            double lo_sign =
+                ( face_aligned[d] && boundary_type[d] == BoundaryType::SOLID )
+                    ? -1.0
+                    : 1.0;
+            double hi_sign = ( face_aligned[d] &&
+                               boundary_type[d + 2] == BoundaryType::SOLID )
+                                 ? -1.0
+                                 : 1.0;
+            Kokkos::parallel_for(
+                "fill wall ghosts",
+                createExecutionPolicy( ghost_space, exec_space ),
+                KOKKOS_LAMBDA( const int i, const int j ) {
+                    int g[2], src[2] = { i, j };
+                    double sign;
+                    l2g( i, j, g[0], g[1] );
+                    if ( g[d] < lo )
+                    {
+                        src[d] += lo_mirror - 2 * g[d];
+                        sign = lo_sign;
+                    }
+                    else if ( g[d] > hi )
+                    {
+                        src[d] += hi_mirror - 2 * g[d];
+                        sign = hi_sign;
+                    }
+                    else
+                        return;
+                    field( i, j, 0 ) = sign * field( src[0], src[1], 0 );
+                } );
+        }
+    }
+
     Kokkos::Array<int, 4>
         boundary_type; /**< Boundary condition type on all walls  */
     Kokkos::Array<int, 2> min;
     Kokkos::Array<int, 2> max;
 };
 
-} // namespace CajitaFluids
+} // namespace CabanaFluids
 
 #endif

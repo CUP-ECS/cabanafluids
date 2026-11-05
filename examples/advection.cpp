@@ -4,7 +4,7 @@
  * @author Jered Dominguez-Trujillo <jereddt@unm.edu>
  *
  * @section DESCRIPTION
- * Simple fluid advection in a domain closed in Y and open in X
+ * Simple fluid advection in a domain closed on all four sides
  * with a single input source.
  */
 
@@ -12,14 +12,14 @@
 #define DEBUG 0
 #endif
 
-//#define HYPRE
+// #define HYPRE
 
 // Include Statements
 #include <BoundaryConditions.hpp>
 #include <Solver.hpp>
 
 #include <Cabana_Core.hpp>
-#include <Cajita.hpp>
+#include <Cabana_Grid.hpp>
 #include <Kokkos_Core.hpp>
 
 #include <mpi.h>
@@ -34,13 +34,13 @@
 #include <iostream>
 #include <stdlib.h>
 
-using namespace CajitaFluids;
+using namespace CabanaFluids;
 
 // Short Args: n - Cell Count, s - Domain Size,
-// x - On-node Parallelism ( Serial/Threaded/OpenMP/CUDA ),
-// t - Time Steps, w - Write Frequency
+// p - On-node Parallelism ( Serial/Threads/OpenMP/CUDA/HIP ),
+// t - Time Steps, f - Write Frequency
 // d - Input Density, i - Input Location, v - Inflow Velocity
-static char* shortargs = (char*)"n:s:t:i:d:g:p:m:c:x:y:w:h:q:u:v:";
+static char* shortargs = (char*)"n:s:t:i:f:d:g:p:m:c:x:y:w:h:q:u:v:";
 
 static option longargs[] = {
     // Basic simulation parameters
@@ -48,6 +48,7 @@ static option longargs[] = {
     { "size", required_argument, NULL, 's' },
     { "time", required_argument, NULL, 't' },
     { "deltat", required_argument, NULL, 'i' },
+    { "write-freq", required_argument, NULL, 'f' },
     { "density", required_argument, NULL, 'd' },
     { "gravity", required_argument, NULL, 'g' },
     { "driver", required_argument, NULL, 'p' },
@@ -104,8 +105,9 @@ void help( const int rank, char* progname )
     {
         std::cout << "Usage: " << progname << "\n";
         std::cout << std::left << std::setw( 10 ) << "-p" << std::setw( 40 )
-                  << "On-node Parallelism Model (default serial)" << std::left
-                  << "\n";
+                  << "On-node Parallelism Model: default, serial, threads, "
+                     "openmp, cuda, or hip (default \"default\")"
+                  << std::left << "\n";
         std::cout << std::left << std::setw( 10 ) << "-s" << std::setw( 40 )
                   << "Size of domain (default 1.0)" << std::left << "\n";
         std::cout << std::left << std::setw( 10 ) << "-n" << std::setw( 40 )
@@ -113,12 +115,19 @@ void help( const int rank, char* progname )
         std::cout << std::left << std::setw( 10 ) << "-t" << std::setw( 40 )
                   << "Amount of time to simulate (default 4.0)" << std::left
                   << "\n";
-        std::cout << std::left << std::setw( 10 ) << "-t" << std::setw( 40 )
-                  << "Timestep increment (default 0.005)" << std::left << "\n";
-        std::cout << std::left << std::setw( 10 ) << "-w" << std::setw( 40 )
+        std::cout << std::left << std::setw( 10 ) << "-i" << std::setw( 40 )
+                  << "Maximum timestep (default 0.005)" << std::left << "\n";
+        std::cout << std::left << std::setw( 10 ) << "-f" << std::setw( 40 )
                   << "Write Frequency (default 20)" << std::left << "\n";
         std::cout << std::left << std::setw( 10 ) << "-d" << std::setw( 40 )
                   << "Fluid Density (default 0.1)" << std::left << "\n";
+        std::cout << std::left << std::setw( 10 ) << "-m" << std::setw( 40 )
+                  << "Matrix Solver (default Reference)" << std::left << "\n";
+        std::cout << std::left << std::setw( 10 ) << "-c" << std::setw( 40 )
+                  << "Preconditioner (default Jacobi for Reference, PFMG "
+                     "for hypre PCG, GMRES, and BiCGSTAB, none for PFMG and "
+                     "SMG)"
+                  << std::left << "\n";
 
         // Inflow Source Arguments
         std::cout << std::left << std::setw( 10 ) << "-x" << std::setw( 40 )
@@ -126,21 +135,21 @@ void help( const int rank, char* progname )
         std::cout << std::left << std::setw( 10 ) << "-y" << std::setw( 40 )
                   << "Inflow Y Location (default 0.45)" << std::left << "\n";
         std::cout << std::left << std::setw( 10 ) << "-w" << std::setw( 40 )
-                  << "Inflow Width (default 0.001)" << std::left << "\n";
+                  << "Inflow Width (default 0.02)" << std::left << "\n";
         std::cout << std::left << std::setw( 10 ) << "-h" << std::setw( 40 )
                   << "Inflow Height (default 0.1)" << std::left << "\n";
         std::cout << std::left << std::setw( 10 ) << "-u" << std::setw( 40 )
-                  << "Inflow X Velocity (default 0)" << std::left << "\n";
+                  << "Inflow X Velocity (default 1.0)" << std::left << "\n";
         std::cout << std::left << std::setw( 10 ) << "-v" << std::setw( 40 )
-                  << "Inflow Y Velocity (default 1.0)" << std::left << "\n";
+                  << "Inflow Y Velocity (default 0)" << std::left << "\n";
         std::cout << std::left << std::setw( 10 ) << "-q" << std::setw( 40 )
-                  << "Inflow Quantity (default 3.0)" << std::left << "\n";
+                  << "Inflow Rate (default 3.0)" << std::left << "\n";
 
         // Body Force Arguments
         std::cout << std::left << std::setw( 10 ) << "-g" << std::setw( 40 )
                   << "Gravity (default 0.0)" << std::left << "\n";
 
-        std::cout << std::left << std::setw( 10 ) << "-h" << std::setw( 40 )
+        std::cout << std::left << std::setw( 10 ) << "--help" << std::setw( 40 )
                   << "Print Help Message" << std::left << "\n";
     }
 }
@@ -162,15 +171,7 @@ int parseInput( const int rank, const int argc, char** argv, ClArgs& cl )
 
     /// Set default values
 
-    // If we're using CUDA, then HYPRE is cuda-enabled, state must exist on
-    // the device, and serial won't work so make cuda the default
-    // If we're
-#ifdef KOKKOS_ENABLE_CUDA
-    cl.device = "cuda"; // Default Thread Setting
-#else
-    cl.device = "serial"; // Default Thread Setting
-#endif
-
+    cl.device = "default"; // Default Thread Setting
     cl.t_final = 4.0;
     cl.delta_t = 0.005;
     cl.write_freq = 20;
@@ -183,10 +184,11 @@ int parseInput( const int rank, const int argc, char** argv, ClArgs& cl )
     cl.density = 0.1;
     cl.gravity = 0.0;
 
-    // Default to the Hypre conjugate gradient solver with a sophisticated
-    // preconditioner
-    cl.solver = "PCG";
-    cl.precon = "PFMG";
+    // Default to Cabana's built-in reference conjugate gradient solver with
+    // a simple jacobi preconditioner. An empty preconditioner lets
+    // createVelocityCorrector pick the one that suits the chosen solver.
+    cl.solver = "Reference";
+    cl.precon = "";
 
     int ch;
     // Now parse any arguments
@@ -211,7 +213,7 @@ int parseInput( const int rank, const int argc, char** argv, ClArgs& cl )
         case 's':
             cl.global_bounding_box[2] = atof( optarg );
 
-            if ( cl.global_bounding_box[3] <= 0.0 )
+            if ( cl.global_bounding_box[2] <= 0.0 )
             {
                 if ( rank == 0 )
                 {
@@ -238,11 +240,23 @@ int parseInput( const int rank, const int argc, char** argv, ClArgs& cl )
             break;
         case 'i':
             cl.delta_t = atof( optarg );
-            if ( cl.t_final <= 0.0 )
+            if ( cl.delta_t <= 0.0 )
             {
                 if ( rank == 0 )
                 {
                     std::cerr << "Invalid timestep increment argument.\n";
+                    help( rank, argv[0] );
+                }
+                exit( -1 );
+            }
+            break;
+        case 'f':
+            cl.write_freq = atoi( optarg );
+            if ( cl.write_freq <= 0 )
+            {
+                if ( rank == 0 )
+                {
+                    std::cerr << "Invalid write frequency argument.\n";
                     help( rank, argv[0] );
                 }
                 exit( -1 );
@@ -259,10 +273,12 @@ int parseInput( const int rank, const int argc, char** argv, ClArgs& cl )
             break;
         case 'p':
             cl.device = strdup( optarg );
-            if ( ( cl.device.compare( "serial" ) != 0 ) &&
+            if ( ( cl.device.compare( "default" ) != 0 ) &&
+                 ( cl.device.compare( "serial" ) != 0 ) &&
+                 ( cl.device.compare( "threads" ) != 0 ) &&
                  ( cl.device.compare( "cuda" ) != 0 ) &&
-                 ( cl.device.compare( "openmp" ) != 0 ) &&
-                 ( cl.device.compare( "pthreads" ) != 0 ) )
+                 ( cl.device.compare( "hip" ) != 0 ) &&
+                 ( cl.device.compare( "openmp" ) != 0 ) )
             {
                 if ( rank == 0 )
                 {
@@ -393,7 +409,7 @@ struct MeshInitFunc
     };
 
     KOKKOS_INLINE_FUNCTION
-    bool operator()( Cajita::Cell, CajitaFluids::Field::Quantity,
+    bool operator()( Cabana::Grid::Cell, CabanaFluids::Field::Quantity,
                      [[maybe_unused]] const int index[Dim],
                      [[maybe_unused]] const double x[Dim],
                      double& quantity ) const
@@ -403,8 +419,8 @@ struct MeshInitFunc
         return true;
     };
     KOKKOS_INLINE_FUNCTION
-    bool operator()( Cajita::Face<Cajita::Dim::I>,
-                     CajitaFluids::Field::Velocity,
+    bool operator()( Cabana::Grid::Face<Cabana::Grid::Dim::I>,
+                     CabanaFluids::Field::Velocity,
                      [[maybe_unused]] const int index[Dim],
                      [[maybe_unused]] const double x[Dim],
                      double& xvelocity ) const
@@ -413,8 +429,8 @@ struct MeshInitFunc
         return true;
     };
     KOKKOS_INLINE_FUNCTION
-    bool operator()( Cajita::Face<Cajita::Dim::J>,
-                     CajitaFluids::Field::Velocity,
+    bool operator()( Cabana::Grid::Face<Cabana::Grid::Dim::J>,
+                     CabanaFluids::Field::Velocity,
                      [[maybe_unused]] const int index[Dim],
                      [[maybe_unused]] const double x[Dim],
                      double& yvelocity ) const
@@ -424,7 +440,7 @@ struct MeshInitFunc
     }
 #if 0
     KOKKOS_INLINE_FUNCTION
-    bool operator()( Cajita::Face<Cajita::Dim::K>, 
+    bool operator()( Cabana::Grid::Face<Cabana::Grid::Dim::K>, 
                      [[maybe_unused]] const int coords[Dim], 
 		     [[maybe_unused]] const int x[Dim], 
 	             double &zvelocity ) const {
@@ -441,18 +457,19 @@ void advect( ClArgs& cl )
     MPI_Comm_size( MPI_COMM_WORLD, &comm_size ); // Number of Ranks
     MPI_Comm_rank( MPI_COMM_WORLD, &rank );      // Get My Rank
 
-    Cajita::DimBlockPartitioner<2> partitioner; // Create Cajita Partitioner
-    CajitaFluids::BoundaryCondition<2> bc;
+    Cabana::Grid::DimBlockPartitioner<2>
+        partitioner; // Create Cabana Grid Partitioner
+    CabanaFluids::BoundaryCondition<2> bc;
     bc.boundary_type = {
-        CajitaFluids::BoundaryType::SOLID, CajitaFluids::BoundaryType::SOLID,
-        CajitaFluids::BoundaryType::SOLID, CajitaFluids::BoundaryType::SOLID };
+        CabanaFluids::BoundaryType::SOLID, CabanaFluids::BoundaryType::SOLID,
+        CabanaFluids::BoundaryType::SOLID, CabanaFluids::BoundaryType::SOLID };
 
-    CajitaFluids::InflowSource<2> source( cl.inLocation, cl.inSize,
+    CabanaFluids::InflowSource<2> source( cl.inLocation, cl.inSize,
                                           cl.inVelocity, cl.inQuantity );
-    CajitaFluids::BodyForce<2> body( 0.0, -cl.gravity );
+    CabanaFluids::BodyForce<2> body( 0.0, -cl.gravity );
 
     MeshInitFunc<2> initializer( 0.0, { 0.0, 0.0 } );
-    auto solver = CajitaFluids::createSolver(
+    auto solver = CabanaFluids::createSolver(
         cl.device, MPI_COMM_WORLD, cl.global_bounding_box, cl.global_num_cells,
         partitioner, cl.density, initializer, bc, source, body, cl.delta_t,
         cl.solver, cl.precon );
@@ -464,6 +481,9 @@ int main( int argc, char* argv[] )
 {
     MPI_Init( &argc, &argv );         // Initialize MPI
     Kokkos::initialize( argc, argv ); // Initialize Kokkos
+#ifdef Cabana_ENABLE_HYPRE
+    HYPRE_Init(); // Initialize hypre once, before any solver uses it
+#endif
 
     // MPI Info
     int comm_size, rank;
@@ -479,7 +499,7 @@ int main( int argc, char* argv[] )
     if ( rank == 0 )
     {
         // Print Command Line Options
-        std::cout << "CajitaFluids\n";
+        std::cout << "CabanaFluids\n";
         std::cout << "=======Command line arguments=======\n";
         std::cout << std::left << std::setw( 20 ) << "Thread Setting"
                   << ": " << std::setw( 8 ) << cl.device
@@ -502,7 +522,7 @@ int main( int argc, char* argv[] )
                   << std::setw( 8 ) << cl.inVelocity[1] << " )\n";
         std::cout << std::left << std::setw( 20 ) << "Total Simulation Time"
                   << ": " << std::setw( 8 ) << cl.t_final << "\n";
-        std::cout << std::left << std::setw( 20 ) << "Timestep Size"
+        std::cout << std::left << std::setw( 20 ) << "Maximum Timestep"
                   << ": " << std::setw( 8 ) << cl.delta_t << "\n";
         std::cout << std::left << std::setw( 20 ) << "Write Frequency"
                   << ": " << std::setw( 8 ) << cl.write_freq
@@ -513,6 +533,9 @@ int main( int argc, char* argv[] )
     // Call advection solver
     advect( cl );
 
+#ifdef Cabana_ENABLE_HYPRE
+    HYPRE_Finalize(); // Finalize hypre after every solver is destroyed
+#endif
     Kokkos::finalize(); // Finalize Kokkos
     MPI_Finalize();     // Finalize MPI
 

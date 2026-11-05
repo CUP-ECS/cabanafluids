@@ -1,29 +1,41 @@
 name: build-and-deploy-ci-container
 
+# Pull requests build the container to check it; only a push to develop
+# publishes it, so an unmerged change never replaces the image every branch
+# tests against
 on: 
   pull_request:
     branches:
       - 'develop'
     paths:
       - 'configs/github/spack.yaml'
-      - '.github/workflow/build-ci-container.yaml'
+      - '.github/workflows/build-ci-container.yml'
+  push:
+    branches:
+      - 'develop'
+    paths:
+      - 'configs/github/spack.yaml'
+      - '.github/workflows/build-ci-container.yml'
 
 jobs:
   deploy-docker-container:
     runs-on: ubuntu-latest
-#    permissions:
-#      packages: write
+    permissions:
+      contents: read
+      packages: write
 #    credentials:
 #      username: ${{ github.actor }}
 #      password: ${{ secrets.github_token }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
 
+      # Keep this release in step with `images: spack` in spack.yaml
       - name: Checkout spack repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
         with:
           repository: spack/spack
+          ref: v1.2.2
           path: ./spack
 
       - name: Generate the Dockerfile
@@ -38,29 +50,30 @@ jobs:
           fi
 
       - name: Upload Dockerfile
-        uses: actions/upload-artifact@6673cd052c4cd6fcf4b4e6e60ea986c889389535
+        uses: actions/upload-artifact@v7
         with:
           name: Dockerfile
           path: Dockerfile
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v4
 
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v1
+        if: github.event_name == 'push'
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and Deploy
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v7
         with:
           context: .
-          push: true
+          push: ${{ github.event_name == 'push' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          tags: ghcr.io/cup-ecs/cajitafluids-tester:latest
+          tags: ghcr.io/cup-ecs/cabanafluids-tester:latest

@@ -1,0 +1,29 @@
+# Spack environment specification for class tutorials that build and run
+# CabanaFluids on a student's own Linux or macOS machine without a GPU. It
+# uses Kokkos' Serial and Threads backends; OpenMP is left out because Apple
+# Clang lacks it without extra work. In general we want to let spack figure
+# out the right version and options for hypre and MPI so we don't specify
+# them here.
+#
+# To build for CUDA instead, use `configs/tutorial-cuda/`, which adds
+# `+cuda cuda_arch=<arch>` to the hypre, kokkos, cabana, and cabanafluids
+# specs, and `+cuda_lambda` and `+wrapper` to kokkos; set <arch> to the GPU's
+# compute capability (70 for Volta). `configs/generic/` also shows `%clang`.
+spack:
+  specs:
+  - hdf5+mpi  # Silo should have an mpi-aware version of hdf5
+  - silo@4.12 # Specify a non-bsd versions since some of those don't build
+  - hypre +mpi # Make sure we get an mpi version of hypre
+  - kokkos@4 +serial +threads cxxstd=17 # Kokkos 5 requires C++20
+  - cupecs.cabana@master +grid +hypre +mpi +serial +threads # Upstream rejects hypre 3
+  - cabanafluids@develop +hypre
+  concretizer:
+    unify: true
+  view: true
+
+  # Upstream Cabana's CMake asks for hypre 2.22.1 and rejects hypre 3, which
+  # Spack pairs with Cabana 0.8; the CUP-ECS fork and its package accept it
+  repos:
+    cupecs:
+      git: https://github.com/COMPASS-PSAAP/spack-packages.git
+      paths: [spack_pkgs/spack_repo/cupecs]

@@ -5,23 +5,136 @@
 # be installing that into the container in which the tests will run.
 spack:
   specs:
-  - git       # Need a newer version of git to be able to get submodules
-  - cmake     # Make sure we get a new enough version of cmake
   - hdf5+mpi  # Silo should have an mpi-aware version of hdf5
-  - silo@4.11 # Specify a non-bsd versions since some of those don't build
-  - hypre-cmake +mpi # Make sure we get an mpi version of hypre
-  - kokkos std=17 
-  - cabana +hypre +mpi %gcc
-  concretization: together
+  - silo@4.12 # Specify a non-bsd versions since some of those don't build
+  - hypre +mpi # Make sure we get an mpi version of hypre
+  - kokkos@4 +serial cxxstd=17 # Kokkos 5 requires C++20
+  - cupecs.cabana@git.591b4de96c5e43e4c355b822f1403443a704ca1c=master +grid +hypre +mpi %gcc # Upstream rejects hypre 3; pinned past the stencil fix
+  - googletest # Unit test framework
+  concretizer:
+    unify: true
   view: true
+
+  # Build for a portable x86 target; Spack otherwise targets whatever CPU
+  # builds the image, and an AVX-512 build crashes on test runners without it
+  packages:
+    all:
+      require: target=x86_64_v3
+
+    # Take build tools and GoogleTest from Ubuntu rather than building them;
+    # they were most of what Spack built for the image. apt builds them for
+    # generic x86-64, so the git and tar that checkout runs cannot hit the
+    # AVX-512 crash above. MPI, HDF5, Silo, hypre, Kokkos, and Cabana stay
+    # Spack builds so their versions keep matching local environments.
+    # Versions are Ubuntu 24.04's, from
+    # https://packages.ubuntu.com/noble/<package> on 2026-11-04; the Ubuntu
+    # package and version follow each entry. zlib stays a Spack build:
+    # given Ubuntu's, pmix's configure looks for libz in /usr/lib, not
+    # /usr/lib/x86_64-linux-gnu, and fails.
+    autoconf:
+      externals: [{spec: autoconf@2.71, prefix: /usr}]  # autoconf 2.71-3
+      buildable: false
+    automake:
+      externals: [{spec: automake@1.16.5, prefix: /usr}]  # automake 1:1.16.5-1.3ubuntu1
+      buildable: false
+    bzip2:
+      externals: [{spec: bzip2@1.0.8, prefix: /usr}]  # libbz2-dev 1.0.8-5.1ubuntu0.1
+      buildable: false
+    cmake:
+      # Make sure we get a new enough version of cmake; hypre 3 needs 3.21
+      externals: [{spec: cmake@3.28.3, prefix: /usr}]  # cmake 3.28.3-1build7
+      buildable: false
+    curl:
+      externals: [{spec: curl@8.5.0, prefix: /usr}]  # libcurl4-openssl-dev 8.5.0-2ubuntu10.16
+      buildable: false
+    git:
+      externals: [{spec: git@2.43.0, prefix: /usr}]  # git 1:2.43.0-1ubuntu7.4
+      buildable: false
+    gmake:
+      externals: [{spec: gmake@4.3, prefix: /usr}]  # make 4.3-4.1build2
+      buildable: false
+    googletest:
+      externals: [{spec: googletest@1.14.0, prefix: /usr}]  # libgtest-dev 1.14.0-1
+      buildable: false
+    libtool:
+      externals: [{spec: libtool@2.4.7, prefix: /usr}]  # libtool 2.4.7-7build1
+      buildable: false
+    m4:
+      externals: [{spec: m4@1.4.19, prefix: /usr}]  # m4 1.4.19-4build1
+      buildable: false
+    ncurses:
+      externals: [{spec: ncurses@6.4, prefix: /usr}]  # libncurses-dev 6.4+20240113-1ubuntu2.2
+      buildable: false
+    openssh:
+      externals: [{spec: openssh@9.6p1, prefix: /usr}]  # openssh-client 1:9.6p1-3ubuntu13.20
+      buildable: false
+    openssl:
+      externals: [{spec: openssl@3.0.13, prefix: /usr}]  # libssl-dev 3.0.13-0ubuntu3.16
+      buildable: false
+    perl:
+      externals: [{spec: perl@5.38.2, prefix: /usr}]  # perl 5.38.2-3.2ubuntu0.6
+      buildable: false
+    pkgconf:
+      externals: [{spec: pkgconf@1.8.1, prefix: /usr}]  # pkgconf 1.8.1-2build1
+      buildable: false
+    python:
+      externals: [{spec: python@3.12.3, prefix: /usr}]  # python3.12 3.12.3-1ubuntu0.17
+      buildable: false
+    tar:
+      externals: [{spec: tar@1.35, prefix: /usr}]  # tar 1.35+dfsg-3ubuntu0.4
+      buildable: false
+    xz:
+      externals: [{spec: xz@5.4.5, prefix: /usr}]  # liblzma-dev 5.6.1+really5.4.5-1ubuntu0.4
+      buildable: false
+    zstd:
+      externals: [{spec: zstd@1.5.5, prefix: /usr}]  # libzstd-dev 1.5.5+dfsg2-2build1.1
+      buildable: false
+
+  # Upstream Cabana's CMake asks for hypre 2.22.1 and rejects hypre 3, which
+  # Spack pairs with Cabana 0.8; the CUP-ECS fork and its package accept it
+  repos:
+    cupecs:
+      git: https://github.com/COMPASS-PSAAP/spack-packages.git
+      paths: [spack_pkgs/spack_repo/cupecs]
 
   container:
     # Select the format of the recipe e.g. docker,
     format: docker
 
+    # Pin the base image and Spack release so the container changes only
+    # when this file does; keep the release in step with the workflow
+    images:
+      os: "ubuntu:24.04"
+      spack: "1.2.2"
+
     # Additional system packages that are needed at runtime to be able to 
     # build the 
     os_packages:
+      # The development packages behind the externals above
+      build:
+      - autoconf
+      - automake
+      - bzip2
+      - cmake
+      - curl
+      - git
+      - libbz2-dev
+      - libcurl4-openssl-dev
+      - libgmock-dev
+      - libgtest-dev
+      - liblzma-dev
+      - libncurses-dev
+      - libssl-dev
+      - libtool
+      - libzstd-dev
+      - m4
+      - make
+      - openssh-client
+      - perl
+      - pkgconf
+      - python3-dev
+      - tar
+      - xz-utils
       final:
       - build-essential
       - make
@@ -33,4 +146,16 @@ spack:
       - python3
       - python3-dev
       - python3-setuptools
-      - clang-format-10
+      # GoogleTest for CabanaFluids' tests, and the runtime libraries of the
+      # externals that Spack-built packages link
+      - libgmock-dev
+      - libgtest-dev
+      - libbz2-1.0
+      - libcurl4t64
+      - liblzma5
+      - libncurses6
+      - libssl3t64
+      - libzstd1
+      # OpenMPI's rsh launcher looks for ssh on PATH; Spack's openssh used
+      # to supply it through the view
+      - openssh-client
