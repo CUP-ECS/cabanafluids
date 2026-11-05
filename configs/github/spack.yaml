@@ -65,6 +65,9 @@ spack:
     ncurses:
       externals: [{spec: ncurses@6.4, prefix: /usr}]  # libncurses-dev 6.4+20240113-1ubuntu2.2
       buildable: false
+    openssh:
+      externals: [{spec: openssh@9.6p1, prefix: /usr}]  # openssh-client 1:9.6p1-3ubuntu13.20
+      buildable: false
     openssl:
       externals: [{spec: openssl@3.0.13, prefix: /usr}]  # libssl-dev 3.0.13-0ubuntu3.16
       buildable: false
@@ -126,6 +129,7 @@ spack:
       - libzstd-dev
       - m4
       - make
+      - openssh-client
       - perl
       - pkgconf
       - python3-dev
@@ -152,3 +156,6 @@ spack:
       - libncurses6
       - libssl3t64
       - libzstd1
+      # OpenMPI's rsh launcher looks for ssh on PATH; Spack's openssh used
+      # to supply it through the view
+      - openssh-client
